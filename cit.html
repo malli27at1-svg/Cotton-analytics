@@ -3,197 +3,1230 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CFTC Supplemental Report (CIT) Analyzer</title>
+<title>CFTC Supplemental Report (CIT) - Commodity Index Trader Analyzer</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);min-height:100vh;color:#333}
-.container{max-width:1400px;margin:0 auto;padding:20px}
-header{text-align:center;color:white;padding:30px 20px 20px;margin-bottom:20px}
-h1{font-size:2em;margin-bottom:8px;text-shadow:2px 2px 4px rgba(0,0,0,.3)}
-.subtitle{font-size:1em;opacity:.9;margin-bottom:15px}
-.info-box{background:rgba(255,255,255,.1);color:white;padding:12px;border-radius:8px;margin-bottom:20px;border-left:4px solid rgba(255,255,255,.5);font-size:.85em;line-height:1.5}
-.controls{background:rgba(255,255,255,.95);padding:18px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.2);margin-bottom:25px;display:flex;flex-wrap:wrap;gap:15px;align-items:center;justify-content:center}
-.control-group{display:flex;flex-direction:column;gap:6px}
-label{font-weight:600;color:#1a1a1a;font-size:.85em;text-transform:uppercase;letter-spacing:.5px}
-select,button,input[type="date"]{padding:10px 16px;border:2px solid #ccc;border-radius:8px;font-size:.95em;background:white;color:#1a1a1a}
-select:focus,input[type="date"]:focus{outline:none;border-color:#0f3460}
-button{background:#0f3460;color:white;border:none;cursor:pointer;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-top:18px}
-button:hover:not(:disabled){background:#1a1a2e;transform:translateY(-1px)}
-button:disabled{background:#95a5a6;cursor:not-allowed}
-.chart-section{background:white;padding:25px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.2);margin-bottom:25px;display:none}
-.chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px;border-bottom:2px solid #ecf0f1;padding-bottom:12px}
-.chart-title{font-size:1.2em;font-weight:700;color:#1a1a1a}
-.chart-controls{display:flex;gap:12px;align-items:center}
-.chart-controls label{font-size:.8em}
-.chart-controls select{min-width:140px;font-size:.85em;padding:6px 10px}
-.chart-container{position:relative;height:380px}
-.weekly-detail-tbl{width:100%;border-collapse:collapse;font-size:.78em}
-.weekly-detail-tbl th{padding:5px 6px;font-weight:600;font-size:.8em;text-align:center;color:white}
-.weekly-detail-tbl td{padding:4px 6px;text-align:right;font-family:monospace;font-size:.82em;border-bottom:1px solid #eee;color:#1a1a1a}
-.weekly-detail-tbl td:first-child{text-align:left;font-family:inherit;font-weight:600}
-.weekly-detail-tbl tr:nth-child(1){background:#f0f7ff}
-.weekly-detail-tbl .chg-row td{font-size:.75em;color:#666;border-bottom:2px solid #dee2e6}
-.cat-hdr.cat-nc,.sub-nc{background:#c0392b}
-.cat-hdr.cat-cm,.sub-cm{background:#27ae60}
-.cat-hdr.cat-it,.sub-it{background:#2980b9}
-.cat-hdr.cat-nr,.sub-nr{background:#7f8c8d}
-.weekly-detail-tbl th[rowspan]{background:#34495e}
-.val-pos{color:#27ae60}.val-neg{color:#e74c3c}
-.loading{display:none;text-align:center;padding:30px;color:white;font-size:1.1em}
-.spinner{border:4px solid rgba(255,255,255,.3);border-radius:50%;border-top:4px solid white;width:36px;height:36px;animation:spin 1s linear infinite;margin:0 auto 15px}
-@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-.error{background:#e74c3c;color:white;padding:15px;border-radius:8px;margin:15px 0;display:none;font-family:monospace;font-size:.85em}
-.summary-section{background:white;padding:25px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.2);margin-bottom:25px;display:none}
-.summary-table{width:100%;border-collapse:collapse;font-size:.8em}
-.summary-table th{background:#0f3460;color:white;padding:8px 6px;text-align:center;font-weight:600;position:sticky;top:0}
-.summary-table td{padding:6px;border-bottom:1px solid #ecf0f1;text-align:center;color:#1a1a1a}
-.summary-table tr:hover{background:#f0f4f8}
-.commodity-name{text-align:left!important;font-weight:600}
-.section-header{background:#34495e!important;color:white!important;font-weight:700;text-align:left!important;padding:8px!important}
-.positive-value{color:#27ae60;font-weight:600}.negative-value{color:#e74c3c;font-weight:600}
-.table-container{max-height:700px;overflow-y:auto;border-radius:8px;border:1px solid #dee2e6}
-.minmax-bar-container{width:100%;height:18px;background:#e9ecef;border-radius:9px;position:relative;margin:3px 0;overflow:hidden}
-.minmax-bar-bg{position:absolute;width:100%;height:100%;background:linear-gradient(90deg,rgba(192,57,43,.15) 0%,rgba(255,255,255,0) 50%,rgba(26,140,78,.15) 100%)}
-.minmax-current{position:absolute;width:10px;height:10px;background:#1a1a1a;border:2px solid white;border-radius:50%;top:50%;transform:translate(-50%,-50%);z-index:10}
-.minmax-labels{display:flex;justify-content:space-between;font-size:.65em;color:#555}
-.minmax-cell{min-width:80px}
-.year-selector{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:10px;background:#f8f9fa;border-radius:8px}
-.year-chip{padding:4px 10px;border:2px solid #ccc;border-radius:18px;cursor:pointer;font-size:.8em;background:white;color:#1a1a1a}
-.year-chip:hover{border-color:#0f3460;background:#e3f2fd}
-.year-chip.active{background:#0f3460;color:white;border-color:#0f3460}
-.commodity-selector{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;padding:10px;background:#e8f4fd;border-radius:8px;align-items:center}
-.commodity-selector-label{font-weight:700;font-size:.82em;color:#1565c0;width:100%;margin-bottom:4px}
-.commodity-chip{padding:4px 12px;border:2px solid #90caf9;border-radius:18px;cursor:pointer;font-size:.78em;background:white;user-select:none;color:#1a1a1a}
-.commodity-chip:hover{border-color:#1976d2;background:#bbdefb}
-.commodity-chip.active{background:#1976d2;color:white;border-color:#1976d2}
-.chip-all{background:#27ae60!important;color:white!important;border-color:#27ae60!important;font-weight:700}
-.chip-none{background:#e74c3c!important;color:white!important;border-color:#e74c3c!important;font-weight:700}
-.selection-count{font-size:.78em;color:#333;font-style:italic;margin-left:6px}
-@media(max-width:768px){h1{font-size:1.6em}.controls{flex-direction:column}.chart-container{height:280px}select,button{width:100%}}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #333; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+header { text-align: center; color: white; padding: 40px 20px; margin-bottom: 30px; }
+h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+.subtitle { font-size: 1.2em; opacity: 0.9; margin-bottom: 20px; }
+.info-box { background: rgba(255,255,255,0.1); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; border-left: 4px solid rgba(255,255,255,0.5); font-size: 0.9em; line-height: 1.6; }
+.controls { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: center; }
+.control-group { display: flex; flex-direction: column; gap: 8px; }
+label { font-weight: 600; color: #2c3e50; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; }
+select, button, input[type="date"] { padding: 12px 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em; transition: all 0.3s ease; background: white; min-width: 200px; }
+select:focus, button:focus, input[type="date"]:focus { outline: none; border-color: #0f3460; }
+button { background: #0f3460; color: white; border: none; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 20px; min-width: auto; }
+button:hover:not(:disabled) { background: #1a1a2e; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+button:disabled { background: #95a5a6; cursor: not-allowed; transform: none; opacity: 0.7; }
+.loading { display: none; text-align: center; padding: 40px; color: white; font-size: 1.2em; }
+.spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid white; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.error { background: #e74c3c; color: white; padding: 20px; border-radius: 10px; margin: 20px 0; display: none; white-space: pre-wrap; font-family: monospace; font-size: 0.9em; max-height: 400px; overflow-y: auto; }
+.warning { background: #f39c12; color: #2c3e50; padding: 15px; border-radius: 8px; margin: 10px 0; display: none; }
+.debug-panel { background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 10px; margin: 20px 0; display: none; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 600px; overflow-y: auto; }
+.chart-section { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px; display: none; }
+.chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; }
+.chart-title { font-size: 1.3em; font-weight: 700; color: #2c3e50; }
+.chart-controls { display: flex; gap: 15px; align-items: center; }
+.chart-container { position: relative; height: 400px; }
+.positive { color: #27ae60; } .negative { color: #e74c3c; } .neutral { color: #f39c12; }
+.legend-custom { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.9em; }
+.legend-color { width: 20px; height: 20px; border-radius: 4px; }
+.summary-section { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px; display: none; }
+.summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+.summary-title { font-size: 1.5em; font-weight: 700; color: #2c3e50; }
+.summary-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+.summary-table th { background: #0f3460; color: white; padding: 10px 8px; text-align: center; font-weight: 600; position: sticky; top: 0; font-size: 0.9em; }
+.summary-table td { padding: 8px; border-bottom: 1px solid #ecf0f1; text-align: center; }
+.summary-table tr:hover { background: #f8f9fa; }
+.summary-table tr:nth-child(even) { background: #f8f9fa; }
+.commodity-name { text-align: left !important; font-weight: 600; }
+.section-header { background: #34495e !important; color: white !important; font-weight: 700; text-align: left !important; padding: 10px !important; }
+.data-cell { font-family: 'Courier New', monospace; }
+.positive-value { color: #27ae60; font-weight: 600; }
+.negative-value { color: #e74c3c; font-weight: 600; }
+.table-container { max-height: 800px; overflow-y: auto; border-radius: 8px; border: 1px solid #dee2e6; }
+.year-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+.year-chip { padding: 5px 12px; border: 2px solid #dee2e6; border-radius: 20px; cursor: pointer; font-size: 0.85em; transition: all 0.2s; background: white; }
+.year-chip:hover { border-color: #0f3460; background: #e3f2fd; }
+.year-chip.active { background: #0f3460; color: white; border-color: #0f3460; }
+.commodity-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; padding: 12px; background: #e8f4fd; border-radius: 8px; align-items: center; }
+.commodity-selector-label { font-weight: 700; font-size: 0.85em; color: #1565c0; width: 100%; margin-bottom: 4px; }
+.commodity-chip { padding: 5px 14px; border: 2px solid #90caf9; border-radius: 20px; cursor: pointer; font-size: 0.82em; transition: all 0.2s; background: white; user-select: none; }
+.commodity-chip:hover { border-color: #1976d2; background: #bbdefb; }
+.commodity-chip.active { background: #1976d2; color: white; border-color: #1976d2; }
+.chip-all { background: #27ae60 !important; color: white !important; border-color: #27ae60 !important; font-weight: 700; }
+.chip-all:hover { background: #1e8449 !important; border-color: #1e8449 !important; }
+.chip-none { background: #e74c3c !important; color: white !important; border-color: #e74c3c !important; font-weight: 700; }
+.chip-none:hover { background: #c0392b !important; border-color: #c0392b !important; }
+.selection-count { font-size: 0.8em; color: #555; font-style: italic; margin-left: 6px; }
+.minmax-bar-container { width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; position: relative; margin: 5px 0; overflow: hidden; }
+.minmax-bar-bg { position: absolute; width: 100%; height: 100%; background: linear-gradient(90deg, #e74c3c 0%, #f39c12 50%, #27ae60 100%); opacity: 0.3; }
+.minmax-current { position: absolute; width: 12px; height: 12px; background: #2c3e50; border: 2px solid white; border-radius: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10; box-shadow: 0 0 4px rgba(0,0,0,0.3); }
+.minmax-labels { display: flex; justify-content: space-between; font-size: 0.7em; color: #6c757d; margin-top: 2px; }
+.minmax-cell { min-width: 80px; }
+.trader-category-noncomm { color: #e74c3c; }
+.trader-category-comm { color: #27ae60; }
+.trader-category-index { color: #3498db; }
+.trader-category-nonrep { color: #95a5a6; }
+.scatter-legend { display: flex; justify-content: center; gap: 20px; margin-top: 15px; flex-wrap: wrap; font-size: 0.85em; }
+.scatter-legend-item { display: flex; align-items: center; gap: 5px; }
+.scatter-dot { width: 12px; height: 12px; border-radius: 50%; }
+.status-message { background: #e3f2fd; border: 1px solid #2196f3; color: #0d47a1; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; display: none; }
+.scatter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+.scatter-chart-wrapper { background: #f8f9fa; border-radius: 10px; padding: 15px; }
+.scatter-chart-title { font-size: 0.9em; font-weight: 600; color: #2c3e50; text-align: center; margin-bottom: 10px; }
+.scatter-chart-container { height: 300px; position: relative; }
+.commodity-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+.commodity-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.85em; }
+.commodity-legend-marker { width: 12px; height: 12px; border-radius: 2px; }
+
+/* ══ 4-Week Detail Table ══════════════════════════════════════ */
+.weekly-detail-tbl { width:100%; border-collapse:collapse; font-size:0.78em; }
+.weekly-detail-tbl th { padding:5px 6px; font-weight:600; font-size:0.8em; text-align:center; color:white; }
+.weekly-detail-tbl td { padding:4px 6px; text-align:right; font-family:monospace; font-size:0.82em; border-bottom:1px solid #eee; color:#1a1a1a; }
+.weekly-detail-tbl td:first-child { text-align:left; font-family:inherit; font-weight:600; }
+.weekly-detail-tbl tr:nth-child(1) { background:#f0f7ff; }
+.weekly-detail-tbl .chg-row td { font-size:0.75em; color:#666; border-bottom:2px solid #dee2e6; }
+.cat-hdr.cat-nc { background:#c0392b; } .sub-nc { background:#c0392b; }
+.cat-hdr.cat-cm { background:#27ae60; } .sub-cm { background:#27ae60; }
+.cat-hdr.cat-it { background:#2980b9; } .sub-it { background:#2980b9; }
+.cat-hdr.cat-nr { background:#7f8c8d; } .sub-nr { background:#7f8c8d; }
+.weekly-detail-tbl th[rowspan] { background:#34495e; }
+.val-pos { color:#27ae60; } .val-neg { color:#e74c3c; }
+
+/* ══ Executive Summary ════════════════════════════════════════ */
+.exec-summary { background: white; padding: 20px 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 25px; display: none; }
+.exec-summary-title { font-size: 1.3em; font-weight: 700; color: #2c3e50; margin-bottom: 12px; border-bottom: 2px solid #0f3460; padding-bottom: 8px; }
+.exec-analysis { font-size: 0.88em; line-height: 1.6; color: #1a1a1a; margin-bottom: 16px; padding: 12px 16px; background: #f8f9fa; border-left: 4px solid #0f3460; border-radius: 4px; }
+.pctile-tables-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.pctile-table-wrap { border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6; }
+.pctile-table-title { font-size: 0.76em; font-weight: 700; color: white; padding: 6px 8px; text-align: center; }
+.pctile-table-title.short-gross  { background: #c0392b; }
+.pctile-table-title.short-net    { background: #d4880f; }
+.pctile-table-title.long-gross   { background: #27ae60; }
+.pctile-table-title.short-gross-oi { background: #a93226; }
+.pctile-table-title.short-net-oi   { background: #b7950b; }
+.pctile-table-title.long-gross-oi  { background: #1e8449; }
+.pctile-tbl { width: 100%; border-collapse: collapse; font-size: 0.76em; }
+.pctile-tbl th { background: #34495e; color: white; padding: 4px 6px; font-size: 0.78em; text-align: left; }
+.pctile-tbl th:last-child { text-align: right; }
+.pctile-tbl td { padding: 3px 6px; border-bottom: 1px solid #eee; color: #1a1a1a; }
+.pctile-tbl td:last-child { text-align: right; font-weight: 600; font-family: monospace; }
+.pctile-tbl tr:last-child td { border-bottom: none; }
+
+@media (max-width: 1200px) { .scatter-grid { grid-template-columns: repeat(2, 1fr); } .pctile-tables-row { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 768px) {
+  h1 { font-size: 1.8em; }
+  .controls { flex-direction: column; }
+  .chart-header { flex-direction: column; align-items: flex-start; }
+  .chart-controls { width: 100%; }
+  .chart-container { height: 300px; }
+  .summary-table { font-size: 0.75em; }
+  select, button { width: 100%; }
+  .scatter-grid { grid-template-columns: 1fr; }
+  .pctile-tables-row { grid-template-columns: repeat(2,1fr); }
+}
 </style>
 <base target="_blank">
+
+<style id="portal-nav-css">
+#portal-nav{
+  position:fixed;top:0;left:0;right:0;height:44px;
+  background:#0d1117;border-bottom:1px solid #1e2a38;
+  display:flex;align-items:center;z-index:99999;
+  font-family:'Segoe UI',system-ui,sans-serif;
+  padding:0;overflow-x:auto;
+}
+#portal-nav::-webkit-scrollbar{display:none}
+.pnav-brand{display:flex;align-items:center;gap:7px;padding:0 14px;border-right:1px solid #1e2a38;height:100%;flex-shrink:0;text-decoration:none}
+.pnav-brand span{font-size:16px}
+.pnav-brand b{font-size:12px;font-weight:700;color:#dce8f4;letter-spacing:.5px;white-space:nowrap}
+.pnav-tabs{display:flex;align-items:center;height:100%;flex:1}
+.pnav-tab{display:flex;align-items:center;padding:0 14px;height:100%;border:none;background:transparent;color:#5a7a94;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;text-decoration:none}
+.pnav-tab:hover{color:#dce8f4;background:rgba(255,255,255,.03)}
+.pnav-tab.active{color:#00c3ff;border-bottom-color:#00c3ff}
+.pnav-home{padding:0 14px;height:100%;display:flex;align-items:center;color:#5a7a94;font-size:12px;text-decoration:none;white-space:nowrap;border-right:1px solid #1e2a38}
+.pnav-home:hover{color:#dce8f4}
+body{padding-top:44px!important}
+</style>
+
 </head>
 <body>
+
+<div id="portal-nav">
+  <a class="pnav-home" href="index.html">🌾 Home</a>
+  <div class="pnav-tabs">
+    <a class="pnav-tab " href="psd.html">📊 PSD</a>
+    <a class="pnav-tab " href="cot.html">📈 COT</a>
+    <a class="pnav-tab " href="exports.html">📧 Exports</a>
+    <a class="pnav-tab active" href="cit.html">🗂 CIT</a>
+  </div>
+</div>
+
 <div class="container">
 <header>
   <h1>📊 CFTC Supplemental Report (CIT) Analyzer</h1>
-  <div class="subtitle">Commitments of Index Traders — Futures &amp; Options Combined</div>
-  <div class="info-box"><strong>Data Source:</strong> CFTC Supplemental Report (4zgm-a668) | <strong>Coverage:</strong> 13 agricultural commodities | <strong>Update:</strong> Weekly (Fri)</div>
+  <div class="subtitle">Commitments of Index Traders - Futures &amp; Options Combined</div>
+  <div class="info-box">
+    <strong>Data Source:</strong> U.S. Commodity Futures Trading Commission (CFTC) Supplemental Report<br>
+    <strong>API Endpoint:</strong> 4zgm-a668 (Socrata)<br>
+    <strong>Note:</strong> If dropdown shows "Error loading", use manual entry or try refresh. CORS issues may affect some browsers.
+  </div>
 </header>
-<div class="controls">
-  <div class="control-group"><label>Commodity</label><select id="commoditySelect"><option value="">-- Loading... --</option></select></div>
-  <div class="control-group"><label>Or Enter Manually</label><input type="text" id="manualCommodity" placeholder="e.g., CORN - CHICAGO BOARD OF TRADE" style="padding:10px 16px;border:2px solid #ccc;border-radius:8px;font-size:.95em;min-width:280px"></div>
-  <div class="control-group"><label>Trader Category</label><select id="traderCategory"><option value="noncommercial" selected>Non-Commercial (NoCIT)</option><option value="commercial">Commercial (NoCIT)</option><option value="index_traders">Index Traders (CIT)</option><option value="nonreportable">Non-Reportable</option></select></div>
-  <div class="control-group"><label>Start Date</label><input type="date" id="startDate" value="2020-01-01"></div>
-  <div class="control-group"><label>End Date</label><input type="date" id="endDate"></div>
-  <button id="fetchBtn" onclick="fetchData()">📈 Generate Charts</button>
-  <button onclick="generateSummary()" style="background:#27ae60;">📋 Market Summary</button>
-  <button onclick="showSeasonalitySection()" style="background:#1565c0;">📅 Seasonality</button>
-  <button onclick="downloadCSV()" style="background:#8e44ad;">⬇️ CSV</button>
-</div>
-<div class="loading" id="loading"><div class="spinner"></div><div id="loadingText">Fetching CFTC data...</div></div>
-<div class="error" id="error"></div>
 
-<!-- 4-Week Detail -->
+<div class="controls">
+  <div class="control-group">
+    <label for="commoditySelect">Select Commodity</label>
+    <select id="commoditySelect"><option value="">-- Loading commodities... --</option></select>
+  </div>
+  <div class="control-group">
+    <label for="manualCommodity">Or Enter Manually</label>
+    <input type="text" id="manualCommodity" placeholder="e.g., CORN - CHICAGO BOARD OF TRADE" style="padding: 12px 20px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em; min-width: 300px;">
+  </div>
+  <div class="control-group">
+    <label for="traderCategory">Trader Category</label>
+    <select id="traderCategory">
+      <option value="noncommercial" selected>Non-Commercial (NoCIT)</option>
+      <option value="commercial">Commercial (NoCIT)</option>
+      <option value="index_traders">Index Traders (CIT)</option>
+      <option value="nonreportable">Non-Reportable</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Start Date</label>
+    <input type="date" id="startDate" value="2020-01-01">
+  </div>
+  <div class="control-group">
+    <label>End Date</label>
+    <input type="date" id="endDate">
+  </div>
+  <button id="fetchBtn" onclick="fetchData()">📈 Generate Charts</button>
+  <button id="summaryBtn" onclick="generateSummary()" style="background:#27ae60;">📋 Market Summary</button>
+  <button id="seasonalityBtn" onclick="showSeasonalitySection()" style="background:#1565c0;">📅 Seasonality Chart</button>
+  <button id="scatterBtn" onclick="generateScatterPlot()" style="background:#9b59b6;">🎯 Comm vs Non-Comm %ile</button>
+  <button id="scatterPctBtn" onclick="generateScatterPctPlot()" style="background:#16a085;">🎯 % of OI %ile</button>
+  <button id="downloadBtn" onclick="downloadCSV()" style="background:#8e44ad;">⬇️ Download CSV</button>
+  <button id="debugBtn" onclick="toggleDebug()" style="background:#e67e22;">🔍 Debug</button>
+</div>
+
+<div class="status-message" id="statusMessage"></div>
+<div class="loading" id="loading"><div class="spinner"></div><div id="loadingText">Fetching CFTC Supplemental data...</div></div>
+<div class="error" id="error"></div>
+<div class="warning" id="warning"></div>
+<div class="debug-panel" id="debugPanel"><h3>API Response Debugger</h3><div id="debugContent"></div></div>
+
+<!-- ══ Executive Summary ══════════════════════════════════════ -->
+<div class="exec-summary" id="execSummary">
+  <div class="exec-summary-title">📊 CIT Executive Summary — Non-Commercial Positioning Extremes</div>
+  <div class="exec-analysis" id="execAnalysisText">Loading analysis...</div>
+  <div class="pctile-tables-row">
+    <div class="pctile-table-wrap">
+      <div class="pctile-table-title short-gross">🔴 Gross Short %ile (Desc)</div>
+      <table class="pctile-tbl"><thead><tr><th>Commodity</th><th>%ile</th></tr></thead><tbody id="tblGrossShort"></tbody></table>
+    </div>
+    <div class="pctile-table-wrap">
+      <div class="pctile-table-title short-net">🟠 Net Short %ile (Desc)</div>
+      <table class="pctile-tbl"><thead><tr><th>Commodity</th><th>%ile</th></tr></thead><tbody id="tblNetShort"></tbody></table>
+    </div>
+    <div class="pctile-table-wrap">
+      <div class="pctile-table-title long-gross">🟢 Gross Long %ile (Asc)</div>
+      <table class="pctile-tbl"><thead><tr><th>Commodity</th><th>%ile</th></tr></thead><tbody id="tblGrossLong"></tbody></table>
+    </div>
+    <div class="pctile-table-wrap">
+      <div class="pctile-table-title short-gross-oi">🔴 Short %OI %ile (Desc)</div>
+      <table class="pctile-tbl"><thead><tr><th>Commodity</th><th>%ile</th></tr></thead><tbody id="tblShortOI"></tbody></table>
+    </div>
+    <div class="pctile-table-wrap">
+      <div class="pctile-table-title short-net-oi">🟠 Net %OI %ile (Desc)</div>
+      <table class="pctile-tbl"><thead><tr><th>Commodity</th><th>%ile</th></tr></thead><tbody id="tblNetOI"></tbody></table>
+    </div>
+    <div class="pctile-table-wrap">
+      <div class="pctile-table-title long-gross-oi">🟢 Long %OI %ile (Asc)</div>
+      <table class="pctile-tbl"><thead><tr><th>Commodity</th><th>%ile</th></tr></thead><tbody id="tblLongOI"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 4-Week Positioning Detail ══════════════════════════════ -->
 <div class="chart-section" id="weeklyDetail">
-  <div class="chart-header"><div class="chart-title" id="weeklyDetailTitle">📋 4-Week Positioning Detail</div></div>
-  <div id="weeklyDetailSummary" style="padding:8px 12px;background:#f0f7ff;border-left:4px solid #0f3460;border-radius:4px;font-size:.85em;line-height:1.5;color:#1a1a1a;margin-bottom:10px;"></div>
-  <div style="overflow-x:auto">
+  <div class="chart-header">
+    <div class="chart-title" id="weeklyDetailTitle">📋 4-Week Positioning Detail</div>
+  </div>
+  <div id="weeklyDetailSummary" style="padding:8px 12px;background:#f0f7ff;border-left:4px solid #0f3460;border-radius:4px;font-size:0.85em;line-height:1.5;color:#1a1a1a;margin-bottom:10px;"></div>
+  <div style="overflow-x:auto;">
     <table class="weekly-detail-tbl" id="weeklyDetailTbl">
       <thead>
-        <tr><th rowspan="2">Date</th><th colspan="3" class="cat-hdr cat-nc">Non-Commercial</th><th colspan="3" class="cat-hdr cat-cm">Commercial</th><th colspan="3" class="cat-hdr cat-it">Index Traders</th><th colspan="3" class="cat-hdr cat-nr">Non-Reportable</th><th rowspan="2">Total OI</th></tr>
-        <tr><th class="sub-nc">Long</th><th class="sub-nc">Short</th><th class="sub-nc">Net</th><th class="sub-cm">Long</th><th class="sub-cm">Short</th><th class="sub-cm">Net</th><th class="sub-it">Long</th><th class="sub-it">Short</th><th class="sub-it">Net</th><th class="sub-nr">Long</th><th class="sub-nr">Short</th><th class="sub-nr">Net</th></tr>
+        <tr>
+          <th rowspan="2">Date</th>
+          <th colspan="3" class="cat-hdr cat-nc">Non-Commercial</th>
+          <th colspan="3" class="cat-hdr cat-cm">Commercial</th>
+          <th colspan="3" class="cat-hdr cat-it">Index Traders</th>
+          <th colspan="3" class="cat-hdr cat-nr">Non-Reportable</th>
+          <th rowspan="2">Total OI</th>
+        </tr>
+        <tr>
+          <th class="sub-nc">Long</th><th class="sub-nc">Short</th><th class="sub-nc">Net</th>
+          <th class="sub-cm">Long</th><th class="sub-cm">Short</th><th class="sub-cm">Net</th>
+          <th class="sub-it">Long</th><th class="sub-it">Short</th><th class="sub-it">Net</th>
+          <th class="sub-nr">Long</th><th class="sub-nr">Short</th><th class="sub-nr">Net</th>
+        </tr>
       </thead>
       <tbody id="weeklyDetailBody"></tbody>
     </table>
   </div>
 </div>
 
-<!-- Main Charts -->
+<!-- ══ Main Charts ════════════════════════════════════════════ -->
 <div class="chart-section" id="chart1">
-  <div class="chart-header"><div class="chart-title">📊 Position Analysis</div><div class="chart-controls"><label>Metric:</label><select id="positionMetric" onchange="updatePositionChart()"><option value="net">Net Position</option><option value="long">Long</option><option value="short">Short</option><option value="spread">Spreading</option><option value="net_pct">Net % of OI</option></select></div></div>
+  <div class="chart-header">
+    <div class="chart-title">📊 Position Analysis</div>
+    <div class="chart-controls">
+      <label>Select Metric:</label>
+      <select id="positionMetric" onchange="updatePositionChart()">
+        <option value="net">Net Position (Long - Short)</option>
+        <option value="long">Long Positions</option>
+        <option value="short">Short Positions</option>
+        <option value="spread">Spreading Positions</option>
+        <option value="net_pct">Net as % of OI</option>
+      </select>
+    </div>
+  </div>
   <div class="chart-container"><canvas id="positionChart"></canvas></div>
+  <div class="legend-custom" id="positionLegend">
+    <div class="legend-item"><div class="legend-color" style="background:rgba(15,52,96,0.8)"></div><span>Position</span></div>
+    <div class="legend-item"><div class="legend-color" style="background:rgba(231,76,60,0.3)"></div><span>Zero Line</span></div>
+  </div>
 </div>
+
 <div class="chart-section" id="chart2">
-  <div class="chart-header"><div class="chart-title">👥 Trader Count</div><div class="chart-controls"><label>Metric:</label><select id="traderMetric" onchange="updateTraderChart()"><option value="total">Total</option><option value="long">Long</option><option value="short">Short</option><option value="both">Both</option></select></div></div>
+  <div class="chart-header">
+    <div class="chart-title">👥 Trader Count Analysis</div>
+    <div class="chart-controls">
+      <label>Select Metric:</label>
+      <select id="traderMetric" onchange="updateTraderChart()">
+        <option value="total">Total Traders</option>
+        <option value="long">Long Traders</option>
+        <option value="short">Short Traders</option>
+        <option value="both">Long &amp; Short (Combined)</option>
+      </select>
+    </div>
+  </div>
   <div class="chart-container"><canvas id="traderChart"></canvas></div>
 </div>
+
 <div class="chart-section" id="chart3">
-  <div class="chart-header"><div class="chart-title">⚖️ All Trader Categories</div><div class="chart-controls"><label>Metric:</label><select id="compareMetric" onchange="updateCompareChart()"><option value="net">Net</option><option value="long">Long</option><option value="short">Short</option><option value="net_pct">Net % OI</option></select></div></div>
+  <div class="chart-header">
+    <div class="chart-title">⚖️ Comparative Analysis: All Trader Categories</div>
+    <div class="chart-controls">
+      <label>Select Metric:</label>
+      <select id="compareMetric" onchange="updateCompareChart()">
+        <option value="net">Net Positions Comparison</option>
+        <option value="long">Long Positions Comparison</option>
+        <option value="short">Short Positions Comparison</option>
+        <option value="net_pct">Net % of OI Comparison</option>
+      </select>
+    </div>
+  </div>
   <div class="chart-container"><canvas id="compareChart"></canvas></div>
 </div>
 
-<!-- Seasonality -->
+<!-- ══ Seasonality ════════════════════════════════════════════ -->
 <div class="chart-section" id="chart4">
-  <div class="chart-header"><div class="chart-title">📅 Weekly Seasonality (52-Week Pattern)</div><div class="chart-controls"><label>Metric:</label><select id="seasonalityMetric" onchange="updateSeasonalityChart()"><option value="net">Net Position</option><option value="long">Long</option><option value="short">Short</option><option value="traders_total">Total Traders</option></select><label style="margin-left:8px">Values:</label><select id="seasonalityAgg" onchange="updateSeasonalityChart()"><option value="sum">Sum</option><option value="avg">Average</option></select></div></div>
-  <div class="commodity-selector" id="commoditySelector"><div class="commodity-selector-label">📦 Select Commodities <span class="selection-count" id="selectionCount"></span></div></div>
-  <div class="year-selector" id="yearSelector"><strong style="width:100%">Select Years:</strong></div>
-  <div class="chart-container" style="height:500px"><canvas id="seasonalityChart"></canvas></div>
-  <div id="seasonalityNote" style="margin-top:10px;padding:10px;background:#f0f7ff;border-radius:6px;font-size:.85em;color:#1565c0"></div>
+  <div class="chart-header">
+    <div class="chart-title">📅 Weekly Seasonality Analysis (52-Week Pattern)</div>
+    <div class="chart-controls">
+      <label>Metric:</label>
+      <select id="seasonalityMetric" onchange="updateSeasonalityChart()">
+        <option value="net">Net Position</option>
+        <option value="long">Long Positions</option>
+        <option value="short">Short Positions</option>
+        <option value="traders_total">Total Traders</option>
+      </select>
+      <label style="margin-left:10px;">Values:</label>
+      <select id="seasonalityAgg" onchange="updateSeasonalityChart()">
+        <option value="sum">Sum across commodities</option>
+        <option value="avg">Average across commodities</option>
+      </select>
+    </div>
+  </div>
+  <div class="commodity-selector" id="commoditySelector">
+    <div class="commodity-selector-label">📦 Select Commodities <span class="selection-count" id="selectionCount"></span></div>
+    <span style="font-size:0.82em; color:#666; width:100%; margin-bottom:4px;">
+      Values for each week are <strong>summed</strong> (or averaged) across all selected commodities and plotted per year.
+    </span>
+  </div>
+  <div class="year-selector" id="yearSelector"><strong style="width:100%;">Select Years:</strong></div>
+  <div class="chart-container" style="height: 500px;"><canvas id="seasonalityChart"></canvas></div>
+  <div id="seasonalityNote" style="margin-top:10px; padding:10px; background:#f0f7ff; border-radius:6px; font-size:0.85em; color:#1565c0;"></div>
 </div>
 
-<!-- Summary Table -->
+<!-- ══ Scatter Charts ═════════════════════════════════════════ -->
+<div class="chart-section" id="chart5">
+  <div class="chart-header">
+    <div class="chart-title">🎯 Commercial vs Non-Commercial Positioning (%ile of Historical Range)</div>
+  </div>
+  <div class="scatter-grid" id="scatterGrid">
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Short vs Non-Comm Short</div><div class="scatter-chart-container"><canvas id="scatterChart1"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Short vs Non-Comm Long</div><div class="scatter-chart-container"><canvas id="scatterChart2"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Long vs Non-Comm Short</div><div class="scatter-chart-container"><canvas id="scatterChart3"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Long vs Non-Comm Long</div><div class="scatter-chart-container"><canvas id="scatterChart4"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Net vs Non-Comm Net</div><div class="scatter-chart-container"><canvas id="scatterChart5"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Net vs Non-Comm Net (Alt View)</div><div class="scatter-chart-container"><canvas id="scatterChart6"></canvas></div></div>
+  </div>
+  <div id="scatterLegendContainer" class="commodity-legend"></div>
+  <div style="margin-top:15px;padding:15px;background:#f8f9fa;border-radius:8px;font-size:0.9em;">
+    <strong>How to read these charts:</strong><br>
+    • <strong>X-axis:</strong> Commercial position as percentile of historical range (0% = most bearish, 100% = most bullish)<br>
+    • <strong>Y-axis:</strong> Non-Commercial position as percentile of historical range<br>
+    • <strong>Quadrants:</strong> Top-right = Both bullish | Bottom-left = Both bearish | Other = divergence
+  </div>
+</div>
+
+<div class="chart-section" id="chart6">
+  <div class="chart-header">
+    <div class="chart-title">🎯 % of OI Positioning (%ile of Historical Range)</div>
+  </div>
+  <div class="scatter-grid" id="scatterPctGrid">
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Short % vs Non-Comm Short %</div><div class="scatter-chart-container"><canvas id="scatterPctChart1"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Short % vs Non-Comm Long %</div><div class="scatter-chart-container"><canvas id="scatterPctChart2"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Long % vs Non-Comm Short %</div><div class="scatter-chart-container"><canvas id="scatterPctChart3"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Long % vs Non-Comm Long %</div><div class="scatter-chart-container"><canvas id="scatterPctChart4"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Net % vs Non-Comm Net %</div><div class="scatter-chart-container"><canvas id="scatterPctChart5"></canvas></div></div>
+    <div class="scatter-chart-wrapper"><div class="scatter-chart-title">Comm Net % vs Non-Comm Net % (Alt)</div><div class="scatter-chart-container"><canvas id="scatterPctChart6"></canvas></div></div>
+  </div>
+  <div id="scatterPctLegendContainer" class="commodity-legend"></div>
+  <div style="margin-top:15px;padding:15px;background:#f8f9fa;border-radius:8px;font-size:0.9em;">
+    <strong>How to read:</strong> X=Commercial %OI %ile. Y=Non-Commercial %OI %ile. Normalized by market size.
+  </div>
+</div>
+
+<!-- ══ Summary Table ══════════════════════════════════════════ -->
 <div class="summary-section" id="summarySection">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px"><div style="font-size:1.3em;font-weight:700;color:#1a1a1a">📋 Supplemental Report Market Summary</div><button onclick="refreshSummary()" style="padding:8px 15px;margin-top:0">🔄 Refresh</button></div>
+  <div class="summary-header">
+    <div class="summary-title">📋 Supplemental Report Market Summary - All Trader Categories</div>
+    <div><button onclick="refreshSummary()" style="padding:8px 15px;">🔄 Refresh All</button></div>
+  </div>
   <div class="table-container">
     <table class="summary-table" id="summaryTable">
-      <thead><tr><th rowspan="2">Commodity</th><th rowspan="2">Category</th><th colspan="2">Net</th><th colspan="2">Long</th><th colspan="2">Short</th><th colspan="2">Net % OI</th></tr><tr><th>Range</th><th>Current</th><th>Range</th><th>Current</th><th>Range</th><th>Current</th><th>Range</th><th>Current</th></tr></thead>
+      <thead>
+        <tr>
+          <th rowspan="2">Commodity</th>
+          <th rowspan="2">Trader Category</th>
+          <th colspan="2">Net Position</th>
+          <th colspan="2">Long Position</th>
+          <th colspan="2">Short Position</th>
+          <th colspan="2">Net % of OI</th>
+          <th colspan="2">Long % of OI</th>
+          <th colspan="2">Short % of OI</th>
+        </tr>
+        <tr>
+          <th>Visual Range</th><th>Current</th>
+          <th>Visual Range</th><th>Current</th>
+          <th>Visual Range</th><th>Current</th>
+          <th>Visual Range</th><th>Current</th>
+          <th>Visual Range</th><th>Current</th>
+          <th>Visual Range</th><th>Current</th>
+        </tr>
+      </thead>
       <tbody id="summaryTableBody"></tbody>
     </table>
   </div>
 </div>
-</div>
+</div><!-- /container -->
 
 <script>
-const API_ENDPOINT='https://publicreporting.cftc.gov/resource/4zgm-a668.json';
-const ALL_13=[
-  'CORN - CHICAGO BOARD OF TRADE','SOYBEANS - CHICAGO BOARD OF TRADE','SOYBEAN OIL - CHICAGO BOARD OF TRADE',
-  'SOYBEAN MEAL - CHICAGO BOARD OF TRADE','WHEAT-SRW - CHICAGO BOARD OF TRADE','WHEAT-HRW - CHICAGO BOARD OF TRADE',
-  'COTTON NO. 2 - ICE FUTURES U.S.','COCOA - ICE FUTURES U.S.','SUGAR NO. 11 - ICE FUTURES U.S.',
-  'COFFEE C - ICE FUTURES U.S.','LEAN HOGS - CHICAGO MERCANTILE EXCHANGE',
-  'LIVE CATTLE - CHICAGO MERCANTILE EXCHANGE','FEEDER CATTLE - CHICAGO MERCANTILE EXCHANGE'
+const API_ENDPOINT = 'https://publicreporting.cftc.gov/resource/4zgm-a668.json';
+
+const ALL_13_COMMODITIES = [
+  'CORN - CHICAGO BOARD OF TRADE',
+  'SOYBEANS - CHICAGO BOARD OF TRADE',
+  'SOYBEAN OIL - CHICAGO BOARD OF TRADE',
+  'SOYBEAN MEAL - CHICAGO BOARD OF TRADE',
+  'WHEAT-SRW - CHICAGO BOARD OF TRADE',
+  'WHEAT-HRW - CHICAGO BOARD OF TRADE',
+  'COTTON NO. 2 - ICE FUTURES U.S.',
+  'COCOA - ICE FUTURES U.S.',
+  'SUGAR NO. 11 - ICE FUTURES U.S.',
+  'COFFEE C - ICE FUTURES U.S.',
+  'LEAN HOGS - CHICAGO MERCANTILE EXCHANGE',
+  'LIVE CATTLE - CHICAGO MERCANTILE EXCHANGE',
+  'FEEDER CATTLE - CHICAGO MERCANTILE EXCHANGE'
 ];
-const TRADER_FIELDS={
-  noncommercial:{long:['ncomm_postions_long_all_nocit'],short:['ncomm_postions_short_all_nocit'],spread:['ncomm_postions_spread_all_nocit'],traders_long:['traders_noncomm_long_all_nocit'],traders_short:['traders_noncomm_short_all_nocit']},
-  commercial:{long:['comm_positions_long_all_nocit'],short:['comm_positions_short_all_nocit'],spread:[],traders_long:['traders_comm_long_all_nocit'],traders_short:['traders_comm_short_all_nocit']},
-  index_traders:{long:['cit_positions_long_all'],short:['cit_positions_short_all'],spread:[],traders_long:['traders_cit_long_all'],traders_short:['traders_cit_short_all']},
-  nonreportable:{long:['nonrept_positions_long_all'],short:['nonrept_positions_short_all'],spread:[],traders_long:[],traders_short:[]}
+
+const TRADER_FIELDS = {
+  noncommercial: {
+    long: ['ncomm_postions_long_all_nocit'], short: ['ncomm_postions_short_all_nocit'],
+    spread: ['ncomm_postions_spread_all_nocit'],
+    traders_long: ['traders_noncomm_long_all_nocit'], traders_short: ['traders_noncomm_short_all_nocit']
+  },
+  commercial: {
+    long: ['comm_positions_long_all_nocit'], short: ['comm_positions_short_all_nocit'],
+    spread: [],
+    traders_long: ['traders_comm_long_all_nocit'], traders_short: ['traders_comm_short_all_nocit']
+  },
+  index_traders: {
+    long: ['cit_positions_long_all'], short: ['cit_positions_short_all'],
+    spread: [],
+    traders_long: ['traders_cit_long_all'], traders_short: ['traders_cit_short_all']
+  },
+  nonreportable: {
+    long: ['nonrept_positions_long_all'], short: ['nonrept_positions_short_all'],
+    spread: [], traders_long: [], traders_short: []
+  }
 };
-const CAT_LABELS={noncommercial:'Non-Commercial',commercial:'Commercial',index_traders:'Index Traders',nonreportable:'Non-Reportable'};
-const CAT_COLORS={noncommercial:'#e74c3c',commercial:'#27ae60',index_traders:'#3498db',nonreportable:'#95a5a6'};
-const COLORS=['#FF0000','#00CC00','#0000FF','#FF8C00','#9400D3','#00CED1','#FF1493','#32CD32','#FF6347','#4169E1','#DAA520','#008B8B','#8B0000'];
-let charts={},currentData=null,allTraderData=null,availableCommodities=[],summaryData=[],selectedYears=new Set(),selectedSeasonComms=new Set(),seasonCache={};
-document.addEventListener('DOMContentLoaded',async()=>{document.getElementById('endDate').valueAsDate=new Date();await loadCommodityList();});
-function showL(s,t=''){document.getElementById('loading').style.display=s?'block':'none';if(t)document.getElementById('loadingText').textContent=t;document.querySelectorAll('button').forEach(b=>b.disabled=s);}
-function showE(m){const e=document.getElementById('error');e.textContent=m;e.style.display='block';setTimeout(()=>e.style.display='none',10000);}
-function hideE(){document.getElementById('error').style.display='none';}
-function getWeekNumber(date){const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const dn=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-dn);const ys=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil((((d-ys)/86400000)+1)/7);}
-function pctile(vals,cur){const s=[...vals].sort((a,b)=>a-b);const idx=s.indexOf(cur);return s.length>1?(idx/(s.length-1))*100:50;}
-async function loadCommodityList(){const sel=document.getElementById('commoditySelect');sel.disabled=true;try{const c=new AbortController();setTimeout(()=>c.abort(),10000);const res=await fetch(`${API_ENDPOINT}?$limit=5000&$order=report_date_as_yyyy_mm_dd DESC`,{signal:c.signal});if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();availableCommodities=[...new Set(data.map(d=>d.market_and_exchange_names))].filter(Boolean).sort();if(!availableCommodities.length)throw new Error('No data');populateDropdown(availableCommodities);}catch(e){availableCommodities=ALL_13.slice();populateDropdown(availableCommodities);}finally{sel.disabled=false;buildCommoditySelector();}}
-function populateDropdown(comms){const sel=document.getElementById('commoditySelect');sel.innerHTML='<option value="">-- Select Commodity --</option>';const sectors={Grains:['WHEAT','CORN','SOYBEAN'],Softs:['COTTON','COCOA','SUGAR','COFFEE'],Livestock:['HOGS','CATTLE']};const grouped={},other=[];comms.forEach(c=>{const u=c.toUpperCase();let found=false;for(const[sector,kws]of Object.entries(sectors)){if(kws.some(k=>u.includes(k))){if(!grouped[sector])grouped[sector]=[];grouped[sector].push(c);found=true;break;}}if(!found)other.push(c);});Object.entries(grouped).forEach(([sector,items])=>{if(!items.length)return;const og=document.createElement('optgroup');og.label=sector;items.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c.split(' - ')[0];og.appendChild(o);});sel.appendChild(og);});if(other.length){const og=document.createElement('optgroup');og.label='Other';other.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c.split(' - ')[0];og.appendChild(o);});sel.appendChild(og);}}
-function getSelectedCommodity(){return document.getElementById('commoditySelect').value||document.getElementById('manualCommodity').value.trim();}
-async function fetchData(){const commodity=getSelectedCommodity();const tc=document.getElementById('traderCategory').value;const sd=document.getElementById('startDate').value;const ed=document.getElementById('endDate').value;if(!commodity){showE('Select a commodity');return;}showL(true,'Fetching data...');hideE();try{const q=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '${sd}' AND report_date_as_yyyy_mm_dd <= '${ed}'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;const res=await fetch(`${API_ENDPOINT}?${q}`);if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();if(!data.length)throw new Error('No data found');currentData=processData(data,tc);if(!currentData)throw new Error('Field mapping failed');allTraderData={noncommercial:processData(data,'noncommercial'),commercial:processData(data,'commercial'),index_traders:processData(data,'index_traders'),nonreportable:processData(data,'nonreportable')};seasonCache[commodity]=processData(data,tc);populateYearSelector();showAllSections();updateAllCharts();updateWeeklyDetail(data);}catch(e){showE('Error: '+e.message);}finally{showL(false);}}
-function processData(rawData,category){if(!rawData||!rawData.length)return null;rawData.sort((a,b)=>new Date(a.report_date_as_yyyy_mm_dd)-new Date(b.report_date_as_yyyy_mm_dd));const first=rawData[0];const fm=TRADER_FIELDS[category];const det={long:findField(first,fm.long),short:findField(first,fm.short),spread:findField(first,fm.spread),tradersLong:findField(first,fm.traders_long),tradersShort:findField(first,fm.traders_short)};if(!det.long||!det.short)return null;const safe=v=>(v==null||v==='')?0:(parseInt(v)||0);const p={dates:rawData.map(d=>d.report_date_as_yyyy_mm_dd),long:rawData.map(d=>safe(d[det.long])),short:rawData.map(d=>safe(d[det.short])),spread:det.spread?rawData.map(d=>safe(d[det.spread])):new Array(rawData.length).fill(0),tradersLong:det.tradersLong?rawData.map(d=>safe(d[det.tradersLong])):new Array(rawData.length).fill(0),tradersShort:det.tradersShort?rawData.map(d=>safe(d[det.tradersShort])):new Array(rawData.length).fill(0),oi:rawData.map(d=>safe(d.open_interest_all)),commodity:first.market_and_exchange_names,category};p.net=p.long.map((l,i)=>l-p.short[i]);p.tradersTotal=p.tradersLong.map((l,i)=>l+p.tradersShort[i]);p.longPct=p.oi.map((oi,i)=>oi>0?p.long[i]/oi*100:0);p.shortPct=p.oi.map((oi,i)=>oi>0?p.short[i]/oi*100:0);p.netPct=p.longPct.map((l,i)=>l-p.shortPct[i]);return p;}
-function findField(record,patterns){if(!patterns||!patterns.length)return null;for(let p of patterns)if(record.hasOwnProperty(p))return p;const keys=Object.keys(record);for(let p of patterns){const m=keys.find(k=>k.toLowerCase()===p.toLowerCase());if(m)return m;}return null;}
-function showAllSections(){['chart1','chart2','chart3','chart4','weeklyDetail'].forEach(id=>document.getElementById(id).style.display='block');}
-function showSeasonalitySection(){document.getElementById('chart4').style.display='block';document.getElementById('chart4').scrollIntoView({behavior:'smooth'});if(selectedYears.size===0){const now=new Date().getFullYear();selectedYears=new Set([now-2,now-1,now]);buildYearSelectorStandalone();}updateSeasonalityChart();}
-function updateWeeklyDetail(rawData){if(!allTraderData||!currentData)return;const commodity=currentData.commodity||'';document.getElementById('weeklyDetailTitle').textContent='📋 '+commodity.split(' - ')[0]+' — 4-Week Positioning Detail';const cats=['noncommercial','commercial','index_traders','nonreportable'];const ref=allTraderData.noncommercial||allTraderData.commercial;if(!ref)return;const n=ref.dates.length;const tb=document.getElementById('weeklyDetailBody');tb.innerHTML='';const weeks=Math.min(4,n);for(let w=0;w<weeks;w++){const idx=n-1-w;const tr=document.createElement('tr');if(w===0)tr.style.background='#f0f7ff';const date=ref.dates[idx].split('T')[0];let html=`<td>${date}</td>`;for(const cat of cats){const d=allTraderData[cat];if(!d||idx>=d.long.length){html+='<td>-</td><td>-</td><td>-</td>';continue;}const lng=d.long[idx]||0,sht=d.short[idx]||0,net=lng-sht;html+=`<td>${lng.toLocaleString()}</td><td>${sht.toLocaleString()}</td><td class="${net>=0?'val-pos':'val-neg'}">${net.toLocaleString()}</td>`;}const oi=(ref.oi&&ref.oi[idx])?ref.oi[idx]:0;html+=`<td>${oi.toLocaleString()}</td>`;tr.innerHTML=html;tb.appendChild(tr);if(w===0&&n>1){const pi=n-2;const cr=document.createElement('tr');cr.className='chg-row';let ch=`<td style="color:#666;font-style:italic">Wk Chg</td>`;for(const cat of cats){const d=allTraderData[cat];if(!d||pi>=d.long.length){ch+='<td>-</td><td>-</td><td>-</td>';continue;}const dl=(d.long[idx]||0)-(d.long[pi]||0),ds=(d.short[idx]||0)-(d.short[pi]||0),dn=dl-ds;const fc=v=>`<td class="${v>0?'val-pos':v<0?'val-neg':''}">${v>0?'+':''}${v.toLocaleString()}</td>`;ch+=fc(dl)+fc(ds)+fc(dn);}const doiChg=oi-(ref.oi&&ref.oi[pi]?ref.oi[pi]:0);ch+=`<td class="${doiChg>0?'val-pos':doiChg<0?'val-neg':''}">${doiChg>0?'+':''}${doiChg.toLocaleString()}</td>`;cr.innerHTML=ch;tb.appendChild(cr);}}const nc=allTraderData.noncommercial;if(nc){const last=n-1,prev=Math.max(0,n-2);const ncNet=nc.net[last],ncNetChg=ncNet-nc.net[prev];const ncNP=pctile(nc.net,ncNet);document.getElementById('weeklyDetailSummary').innerHTML=`<strong>Week of ${nc.dates[last].split('T')[0]}:</strong> Non-Commercial net is <strong style="color:${ncNet>=0?'#27ae60':'#e74c3c'}">${ncNet.toLocaleString()}</strong> contracts (${ncNetChg>=0?'+':''}${ncNetChg.toLocaleString()} w/w), at the <strong>${ncNP.toFixed(0)}th percentile</strong>. Total OI: ${(ref.oi[last]||0).toLocaleString()}.`;}}
-function updateAllCharts(){updatePositionChart();updateTraderChart();updateCompareChart();updateSeasonalityChart();}
-function updatePositionChart(){if(!currentData)return;const m=document.getElementById('positionMetric').value;const ctx=document.getElementById('positionChart').getContext('2d');if(charts.position)charts.position.destroy();let v,l,c,ip=false,sz=false;switch(m){case'net':v=currentData.net;l='Net';c='#0f3460';sz=true;break;case'long':v=currentData.long;l='Long';c='#27ae60';break;case'short':v=currentData.short;l='Short';c='#e74c3c';break;case'spread':v=currentData.spread;l='Spreading';c='#f39c12';break;case'net_pct':v=currentData.netPct;l='Net % OI';c='#0f3460';ip=true;sz=true;break;}const ds=[{label:l,data:currentData.dates.map((d,i)=>({x:d,y:v[i]})),borderColor:c,backgroundColor:c+'20',borderWidth:2,fill:true,tension:.4,pointRadius:0,pointHoverRadius:6}];if(sz)ds.push({label:'Zero',data:currentData.dates.map(d=>({x:d,y:0})),borderColor:'rgba(231,76,60,.3)',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false});charts.position=new Chart(ctx,{type:'line',data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},scales:{x:{type:'time',time:{unit:'month',displayFormats:{month:'MMM yyyy'}}},y:{title:{display:true,text:ip?'% of OI':'Contracts'}}}}});}
-function updateTraderChart(){if(!currentData)return;const m=document.getElementById('traderMetric').value;const ctx=document.getElementById('traderChart').getContext('2d');if(charts.trader)charts.trader.destroy();let ds=[];switch(m){case'total':ds=[{label:'Total',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersTotal[i]})),borderColor:'#0f3460',fill:true}];break;case'long':ds=[{label:'Long',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersLong[i]})),borderColor:'#27ae60',fill:true}];break;case'short':ds=[{label:'Short',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersShort[i]})),borderColor:'#e74c3c',fill:true}];break;case'both':ds=[{label:'Long',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersLong[i]})),borderColor:'#27ae60',fill:false},{label:'Short',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersShort[i]})),borderColor:'#e74c3c',fill:false}];break;}charts.trader=new Chart(ctx,{type:'line',data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:m==='both'}},scales:{x:{type:'time',time:{unit:'month'}},y:{title:{display:true,text:'Traders'}}}}});}
-function updateCompareChart(){if(!allTraderData)return;const m=document.getElementById('compareMetric').value;const ctx=document.getElementById('compareChart').getContext('2d');if(charts.compare)charts.compare.destroy();const ds=Object.entries(allTraderData).filter(([,d])=>d!==null).map(([key,data])=>{let vals=m==='net'?data.net:m==='long'?data.long:m==='short'?data.short:data.netPct;return{label:CAT_LABELS[key],data:data.dates.map((d,i)=>({x:d,y:vals[i]})),borderColor:CAT_COLORS[key],borderWidth:2,fill:false,pointRadius:0};});charts.compare=new Chart(ctx,{type:'line',data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{type:'time',time:{unit:'month'}},y:{title:{display:true,text:m.includes('pct')?'% of OI':'Contracts'}}}}});}
-function buildCommoditySelector(){const container=document.getElementById('commoditySelector');while(container.children.length>2)container.removeChild(container.lastChild);const comms=availableCommodities.length>0?availableCommodities:ALL_13;const ba=document.createElement('button');ba.type='button';ba.className='chip-all commodity-chip';ba.textContent='ALL';ba.style.cssText='margin-top:0;min-width:auto;';ba.onclick=()=>{selectedSeasonComms=new Set(comms);refreshChipStyles();updateSeasonalityChart();};container.appendChild(ba);const bn=document.createElement('button');bn.type='button';bn.className='chip-none commodity-chip';bn.textContent='NONE';bn.style.cssText='margin-top:0;min-width:auto;';bn.onclick=()=>{selectedSeasonComms=new Set([comms[0]]);refreshChipStyles();updateSeasonalityChart();};container.appendChild(bn);if(selectedSeasonComms.size===0){const cur=currentData?currentData.commodity:null;const defs=cur?[cur]:[];for(let i=0;i<comms.length&&defs.length<4;i++)if(!defs.includes(comms[i]))defs.push(comms[i]);selectedSeasonComms=new Set(defs);}comms.forEach(commodity=>{const chip=document.createElement('span');chip.className='commodity-chip';chip.dataset.commodity=commodity;chip.textContent=commodity.split(' - ')[0];chip.title=commodity;chip.onclick=()=>{if(selectedSeasonComms.has(commodity)){if(selectedSeasonComms.size>1)selectedSeasonComms.delete(commodity);}else selectedSeasonComms.add(commodity);refreshChipStyles();updateSeasonalityChart();};container.appendChild(chip);});refreshChipStyles();}
-function refreshChipStyles(){const container=document.getElementById('commoditySelector');Array.from(container.querySelectorAll('[data-commodity]')).forEach(chip=>chip.classList.toggle('active',selectedSeasonComms.has(chip.dataset.commodity)));document.getElementById('selectionCount').textContent=`(${selectedSeasonComms.size} of ${(availableCommodities.length||ALL_13.length)} selected)`;}
-function populateYearSelector(){if(!currentData)return;const years=[...new Set(currentData.dates.map(d=>new Date(d).getFullYear()))].sort();const container=document.getElementById('yearSelector');container.innerHTML='<strong style="width:100%">Select Years:</strong>';selectedYears=new Set(years.slice(-3));years.forEach(year=>{const chip=document.createElement('div');chip.className='year-chip'+(selectedYears.has(year)?' active':'');chip.textContent=year;chip.onclick=()=>{if(selectedYears.has(year)&&selectedYears.size>1){selectedYears.delete(year);chip.classList.remove('active');}else if(!selectedYears.has(year)){selectedYears.add(year);chip.classList.add('active');}updateSeasonalityChart();};container.appendChild(chip);});}
-function buildYearSelectorStandalone(){const container=document.getElementById('yearSelector');container.innerHTML='<strong style="width:100%">Select Years:</strong>';const now=new Date().getFullYear(),years=[now-4,now-3,now-2,now-1,now];years.forEach(year=>{const chip=document.createElement('div');chip.className='year-chip'+(selectedYears.has(year)?' active':'');chip.textContent=year;chip.onclick=()=>{if(selectedYears.has(year)&&selectedYears.size>1){selectedYears.delete(year);chip.classList.remove('active');}else if(!selectedYears.has(year)){selectedYears.add(year);chip.classList.add('active');}updateSeasonalityChart();};container.appendChild(chip);});}
-async function updateSeasonalityChart(){const metric=document.getElementById('seasonalityMetric').value;const agg=document.getElementById('seasonalityAgg').value;const ctx=document.getElementById('seasonalityChart').getContext('2d');if(charts.seasonality)charts.seasonality.destroy();const commoditiesArray=Array.from(selectedSeasonComms);if(!commoditiesArray.length)return;if(!document.querySelector('#yearSelector .year-chip'))buildYearSelectorStandalone();if(selectedYears.size===0)return;const tc=document.getElementById('traderCategory').value;for(const commodity of commoditiesArray){if(!seasonCache[commodity]){try{const q=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '2019-01-01'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;const res=await fetch(`${API_ENDPOINT}?${q}`);const data=await res.json();if(data.length>0)seasonCache[commodity]=processData(data,tc);}catch(e){console.warn(e);}}}const yearData={};for(const commodity of commoditiesArray){const proc=seasonCache[commodity];if(!proc)continue;proc.dates.forEach((dateStr,idx)=>{const year=new Date(dateStr).getFullYear();if(!selectedYears.has(year))return;const week=getWeekNumber(new Date(dateStr));if(!yearData[year])yearData[year]={};if(!yearData[year][week])yearData[year][week]={sum:0,count:0};let val=0;if(metric==='net')val=proc.net[idx];else if(metric==='long')val=proc.long[idx];else if(metric==='short')val=proc.short[idx];else if(metric==='traders_total')val=proc.tradersTotal[idx];yearData[year][week].sum+=val;yearData[year][week].count+=1;});}const yearColors=['#e74c3c','#e67e22','#f39c12','#27ae60','#2980b9','#8e44ad','#16a085','#d35400'];const datasets=[];[...selectedYears].sort().forEach((year,idx)=>{if(!yearData[year])return;const weeklyData=new Array(53).fill(null);for(let w=1;w<=53;w++){const e=yearData[year][w];if(!e||e.count===0)continue;weeklyData[w-1]=agg==='sum'?e.sum:(e.sum/e.count);}const color=yearColors[idx%yearColors.length];datasets.push({label:String(year),data:weeklyData,borderColor:color,borderWidth:2.5,pointRadius:3,pointHoverRadius:6,spanGaps:true,fill:false,tension:.3});});const commLabel=commoditiesArray.length===1?commoditiesArray[0].split(' - ')[0]:commoditiesArray.length+' commodities';const metricLabels={net:'Net Position',long:'Long Positions',short:'Short Positions',traders_total:'Total Traders'};document.getElementById('seasonalityNote').innerHTML=`<strong>Showing:</strong> ${commLabel} | <strong>Metric:</strong> ${metricLabels[metric]} | <strong>Agg:</strong> ${agg}`;charts.seasonality=new Chart(ctx,{type:'line',data:{labels:Array.from({length:53},(_,i)=>'W'+(i+1)),datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{title:{display:true,text:`${commLabel} — Weekly ${metricLabels[metric]}`,font:{size:13,weight:'bold'}},legend:{position:'top',labels:{boxWidth:14,font:{size:11}}}},scales:{x:{title:{display:true,text:'Week of Year'},ticks:{callback:(v,i)=>i%4===0?'W'+(i+1):''}},y:{title:{display:true,text:metricLabels[metric]}}}}});}
-async function generateSummary(){showL(true,'Generating summary...');document.getElementById('summarySection').style.display='block';summaryData=[];const comms=availableCommodities.length>0?availableCommodities:ALL_13;for(let i=0;i<comms.length;i++){const commodity=comms[i];for(const cat of['noncommercial','commercial','index_traders','nonreportable']){document.getElementById('loadingText').textContent=`Loading ${i+1}/${comms.length}: ${commodity.split(' - ')[0]}...`;try{const q=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '2020-01-01'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;const res=await fetch(`${API_ENDPOINT}?${q}`);const data=await res.json();if(!data.length)continue;const p=processData(data,cat);if(!p)continue;const last=p.net.length-1;summaryData.push({commodity:commodity.split(' - ')[0],category:CAT_LABELS[cat],catKey:cat,net:p.net[last],netMin:Math.min(...p.net),netMax:Math.max(...p.net),long:p.long[last],longMin:Math.min(...p.long),longMax:Math.max(...p.long),short:p.short[last],shortMin:Math.min(...p.short),shortMax:Math.max(...p.short),netPct:p.netPct[last],netPctMin:Math.min(...p.netPct),netPctMax:Math.max(...p.netPct)});}catch(e){}}}renderSummaryTable();showL(false);}
-function renderSummaryTable(){const tbody=document.getElementById('summaryTableBody');tbody.innerHTML='';if(!summaryData.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;">No data</td></tr>';return;}summaryData.sort((a,b)=>a.commodity.localeCompare(b.commodity));let current='';summaryData.forEach(item=>{const show=item.commodity!==current;current=item.commodity;const row=document.createElement('tr');row.innerHTML=`<td class="commodity-name">${show?item.commodity:''}</td><td style="font-weight:600;color:${CAT_COLORS[item.catKey]||'#333'}">${item.category}</td>`+minMaxBar(item.net,item.netMin,item.netMax,true)+`<td class="${item.net>0?'positive-value':'negative-value'}">${item.net.toLocaleString()}</td>`+minMaxBar(item.long,item.longMin,item.longMax,false)+`<td class="positive-value">${item.long.toLocaleString()}</td>`+minMaxBar(item.short,item.shortMin,item.shortMax,false)+`<td class="negative-value">${item.short.toLocaleString()}</td>`+minMaxBar(item.netPct,item.netPctMin,item.netPctMax,true)+`<td class="${item.netPct>0?'positive-value':'negative-value'}">${item.netPct.toFixed(1)}%</td>`;tbody.appendChild(row);});}
-function minMaxBar(current,min,max,isNet){if(min===max)return'<td><div class="minmax-bar-container"><div class="minmax-bar-bg"></div></div></td>';const p=((current-min)/(max-min))*100;const color=isNet?(current>=0?'#27ae60':'#e74c3c'):'#2c3e50';const f=n=>Math.abs(n)>=1000?(n/1000).toFixed(1)+'k':n.toLocaleString();return`<td class="minmax-cell"><div class="minmax-bar-container"><div class="minmax-bar-bg"></div><div class="minmax-current" style="left:${Math.max(5,Math.min(95,p))}%;background:${color};"></div></div><div class="minmax-labels"><span>${f(min)}</span><span>${f(max)}</span></div></td>`;}
-function refreshSummary(){generateSummary();}
-function downloadCSV(){if(!currentData){showE('No data');return;}let csv='Date,Long,Short,Net,Spread,OI\n';for(let i=0;i<currentData.dates.length;i++)csv+=`${currentData.dates[i]},${currentData.long[i]},${currentData.short[i]},${currentData.net[i]},${currentData.spread[i]},${currentData.oi[i]}\n`;const b=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`CFTC_CIT_${new Date().toISOString().split('T')[0]}.csv`;a.click();}
+
+const CATEGORY_LABELS  = { noncommercial:'Non-Commercial', commercial:'Commercial', index_traders:'Index Traders', nonreportable:'Non-Reportable' };
+const CATEGORY_COLORS  = { noncommercial:'#e74c3c', commercial:'#27ae60', index_traders:'#3498db', nonreportable:'#95a5a6' };
+const UNIQUE_COMMODITY_COLORS = [
+  '#FF0000','#00CC00','#0000FF','#FF8C00','#9400D3','#00CED1','#FF1493','#32CD32',
+  '#FF6347','#4169E1','#DAA520','#008B8B','#8B0000','#2E8B57','#FF69B4','#6A5ACD',
+  '#DC143C','#228B22','#FF4500','#1E90FF','#B8860B','#006400','#C71585','#00008B'
+];
+const UNIQUE_SHAPES = ['circle','rect','triangle','star','cross','rectRot','rectRounded','circle','rect','triangle','star','cross','rectRot','rectRounded','circle','rect','triangle','star','cross','rectRot','rectRounded','circle','rect','triangle'];
+
+let charts = {};
+let currentData = null;
+let allTraderData = null;
+let availableCommodities = [];
+let debugInfo = {};
+let summaryData = [];
+let scatterData = [];
+let scatterPctData = [];
+let selectedYears = new Set();
+let selectedSeasonalityCommodities = new Set();
+let seasonalityCache = {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('endDate').valueAsDate = new Date();
+  await loadCommodityList();
+});
+
+/* ─── helpers ─── */
+function showStatus(msg) {
+  const el = document.getElementById('statusMessage');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+function showError(msg) {
+  const el = document.getElementById('error');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 10000);
+}
+function hideError() { document.getElementById('error').style.display = 'none'; }
+function showLoading(show, text='') {
+  document.getElementById('loading').style.display = show ? 'block' : 'none';
+  document.getElementById('loadingText').textContent = text;
+  document.querySelectorAll('button').forEach(b => b.disabled = show);
+}
+function getCommodityColor(i) { return UNIQUE_COMMODITY_COLORS[i % UNIQUE_COMMODITY_COLORS.length]; }
+function getCommodityShape(i) { return UNIQUE_SHAPES[i % UNIQUE_SHAPES.length]; }
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+function pctile(vals, cur) {
+  const s = [...vals].sort((a,b) => a-b);
+  const idx = s.indexOf(cur);
+  return s.length > 1 ? (idx / (s.length-1)) * 100 : 50;
+}
+
+/* ─── commodity list ─── */
+async function loadCommodityList() {
+  const select = document.getElementById('commoditySelect');
+  select.disabled = true;
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(`${API_ENDPOINT}?$limit=5000&$order=report_date_as_yyyy_mm_dd DESC`, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    availableCommodities = [...new Set(data.map(d => d.market_and_exchange_names))].filter(c => c).sort();
+    if (availableCommodities.length === 0) throw new Error('No commodities found');
+    populateDropdown(availableCommodities);
+    showStatus(`✅ Loaded ${availableCommodities.length} commodities from API`);
+  } catch (e) {
+    availableCommodities = ALL_13_COMMODITIES.slice();
+    populateDropdown(availableCommodities);
+    showStatus('⚠️ Using fallback commodity list (API unavailable)');
+  } finally {
+    select.disabled = false;
+    buildCommoditySelector();
+  }
+}
+
+function populateDropdown(commodities) {
+  const select = document.getElementById('commoditySelect');
+  select.innerHTML = '<option value="">-- Select Commodity --</option>';
+  const sectors = { 'Grains': ['WHEAT','CORN','SOYBEAN'], 'Softs': ['COTTON','COCOA','SUGAR','COFFEE'], 'Livestock': ['HOGS','CATTLE'] };
+  const grouped = {}, other = [];
+  commodities.forEach(c => {
+    const name = c.toUpperCase(); let found = false;
+    for (const [sector, kws] of Object.entries(sectors)) {
+      if (kws.some(k => name.includes(k))) { if (!grouped[sector]) grouped[sector]=[]; grouped[sector].push(c); found=true; break; }
+    }
+    if (!found) other.push(c);
+  });
+  Object.entries(grouped).forEach(([sector, items]) => {
+    if (!items.length) return;
+    const og = document.createElement('optgroup'); og.label = sector;
+    items.forEach(c => { const o = document.createElement('option'); o.value=c; o.textContent=c.split(' - ')[0]; og.appendChild(o); });
+    select.appendChild(og);
+  });
+  if (other.length) {
+    const og = document.createElement('optgroup'); og.label = 'Other';
+    other.forEach(c => { const o = document.createElement('option'); o.value=c; o.textContent=c.split(' - ')[0]; og.appendChild(o); });
+    select.appendChild(og);
+  }
+}
+
+/* ─── fetch & process ─── */
+function getSelectedCommodity() {
+  return document.getElementById('commoditySelect').value || document.getElementById('manualCommodity').value.trim();
+}
+
+async function fetchData() {
+  const commodity = getSelectedCommodity();
+  const traderCategory = document.getElementById('traderCategory').value;
+  const startDate = document.getElementById('startDate').value;
+  const endDate   = document.getElementById('endDate').value;
+  if (!commodity) { showError('Please select or enter a commodity'); return; }
+  if (new Date(startDate) > new Date(endDate)) { showError('Start date must be before end date'); return; }
+  showLoading(true, 'Fetching data...'); hideError();
+  try {
+    const query = `$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '${startDate}' AND report_date_as_yyyy_mm_dd <= '${endDate}'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;
+    const url = `${API_ENDPOINT}?${query}`;
+    debugInfo.lastUrl = url;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const data = await response.json();
+    debugInfo.recordCount = data.length;
+    debugInfo.allFields = data.length > 0 ? Object.keys(data[0]) : [];
+    if (data.length === 0) throw new Error('No data found for selected criteria');
+    currentData = processData(data, traderCategory);
+    if (!currentData) throw new Error('Failed to process data - field mapping failed');
+    allTraderData = {
+      noncommercial: processData(data, 'noncommercial'),
+      commercial:    processData(data, 'commercial'),
+      index_traders: processData(data, 'index_traders'),
+      nonreportable: processData(data, 'nonreportable')
+    };
+    seasonalityCache[commodity] = processData(data, traderCategory);
+    populateYearSelector();
+    showAllSections();
+    updateAllCharts();
+    updateWeeklyDetail(data);
+    showStatus(`✅ Loaded ${data.length} records for ${commodity.split(' - ')[0]}`);
+  } catch (error) {
+    debugInfo.error = error.message; showError('Error: ' + error.message);
+  } finally { showLoading(false); }
+}
+
+function processData(rawData, category) {
+  if (!rawData || rawData.length === 0) return null;
+  rawData.sort((a,b) => new Date(a.report_date_as_yyyy_mm_dd) - new Date(b.report_date_as_yyyy_mm_dd));
+  const first = rawData[0];
+  const fm = TRADER_FIELDS[category];
+  const detected = {
+    long:         findField(first, fm.long),
+    short:        findField(first, fm.short),
+    spread:       findField(first, fm.spread),
+    tradersLong:  findField(first, fm.traders_long),
+    tradersShort: findField(first, fm.traders_short)
+  };
+  if (!detected.long || !detected.short) return null;
+  const safe = v => (v==null||v==='')?0:(parseInt(v)||0);
+  const p = {
+    dates:        rawData.map(d => d.report_date_as_yyyy_mm_dd),
+    long:         rawData.map(d => safe(d[detected.long])),
+    short:        rawData.map(d => safe(d[detected.short])),
+    spread:       detected.spread ? rawData.map(d => safe(d[detected.spread])) : new Array(rawData.length).fill(0),
+    tradersLong:  detected.tradersLong  ? rawData.map(d => safe(d[detected.tradersLong]))  : new Array(rawData.length).fill(0),
+    tradersShort: detected.tradersShort ? rawData.map(d => safe(d[detected.tradersShort])) : new Array(rawData.length).fill(0),
+    oi:           rawData.map(d => safe(d.open_interest_all)),
+    commodity: first.market_and_exchange_names,
+    category
+  };
+  p.net = p.long.map((l,i) => l - p.short[i]);
+  p.tradersTotal = p.tradersLong.map((l,i) => l + p.tradersShort[i]);
+  p.longPct   = p.oi.map((oi,i) => oi>0 ? p.long[i]/oi*100 : 0);
+  p.shortPct  = p.oi.map((oi,i) => oi>0 ? p.short[i]/oi*100 : 0);
+  p.netPct    = p.longPct.map((l,i) => l - p.shortPct[i]);
+  return p;
+}
+
+function findField(record, patterns) {
+  if (!patterns || !patterns.length) return null;
+  for (let p of patterns) if (record.hasOwnProperty(p)) return p;
+  const keys = Object.keys(record);
+  for (let p of patterns) { const m = keys.find(k => k.toLowerCase() === p.toLowerCase()); if (m) return m; }
+  return null;
+}
+
+/* ─── sections ─── */
+function showAllSections() {
+  ['chart1','chart2','chart3','chart4','weeklyDetail'].forEach(id => {
+    document.getElementById(id).style.display = 'block';
+  });
+}
+
+function showSeasonalitySection() {
+  document.getElementById('chart4').style.display = 'block';
+  document.getElementById('chart4').scrollIntoView({ behavior: 'smooth' });
+  if (selectedYears.size === 0) {
+    const now = new Date().getFullYear();
+    selectedYears = new Set([now-2, now-1, now]);
+    buildYearSelectorStandalone();
+  }
+  updateSeasonalityChart();
+}
+
+/* ─── 4-Week Detail ─── */
+function updateWeeklyDetail(rawData) {
+  if (!allTraderData || !currentData) return;
+  const commodity = currentData.commodity || '';
+  document.getElementById('weeklyDetailTitle').textContent =
+    '📋 ' + commodity.split(' - ')[0] + ' — 4-Week Positioning Detail (All Trader Categories)';
+
+  const cats = ['noncommercial','commercial','index_traders','nonreportable'];
+  const ref = allTraderData.noncommercial || allTraderData.commercial;
+  if (!ref) return;
+  const n = ref.dates.length;
+  const tb = document.getElementById('weeklyDetailBody');
+  tb.innerHTML = '';
+  const weeks = Math.min(4, n);
+
+  for (let w = 0; w < weeks; w++) {
+    const idx = n - 1 - w;
+    const tr = document.createElement('tr');
+    if (w === 0) tr.style.background = '#f0f7ff';
+    const date = ref.dates[idx].split('T')[0];
+    let html = `<td>${date}</td>`;
+    for (const cat of cats) {
+      const d = allTraderData[cat];
+      if (!d || idx >= d.long.length) { html += '<td>-</td><td>-</td><td>-</td>'; continue; }
+      const lng = d.long[idx]||0, sht = d.short[idx]||0, net = lng - sht;
+      html += `<td>${lng.toLocaleString()}</td>`;
+      html += `<td>${sht.toLocaleString()}</td>`;
+      html += `<td class="${net>=0?'val-pos':'val-neg'}">${net.toLocaleString()}</td>`;
+    }
+    const oi = (ref.oi && ref.oi[idx]) ? ref.oi[idx] : 0;
+    html += `<td>${oi.toLocaleString()}</td>`;
+    tr.innerHTML = html;
+    tb.appendChild(tr);
+
+    // Week-on-week change row after most recent
+    if (w === 0 && n > 1) {
+      const pi = n - 2;
+      const cr = document.createElement('tr');
+      cr.className = 'chg-row';
+      let ch = `<td style="color:#666;font-style:italic;">Wk Chg</td>`;
+      for (const cat of cats) {
+        const d = allTraderData[cat];
+        if (!d || pi >= d.long.length) { ch += '<td>-</td><td>-</td><td>-</td>'; continue; }
+        const dl = (d.long[idx]||0)-(d.long[pi]||0);
+        const ds = (d.short[idx]||0)-(d.short[pi]||0);
+        const dn = dl - ds;
+        const fc = v => `<td class="${v>0?'val-pos':v<0?'val-neg':''}">${v>0?'+':''}${v.toLocaleString()}</td>`;
+        ch += fc(dl)+fc(ds)+fc(dn);
+      }
+      const doiChg = oi - (ref.oi && ref.oi[pi] ? ref.oi[pi] : 0);
+      ch += `<td class="${doiChg>0?'val-pos':doiChg<0?'val-neg':''}">${doiChg>0?'+':''}${doiChg.toLocaleString()}</td>`;
+      cr.innerHTML = ch;
+      tb.appendChild(cr);
+    }
+  }
+
+  // Summary text (non-commercial focused)
+  const nc = allTraderData.noncommercial;
+  if (nc) {
+    const last = n-1, prev = Math.max(0, n-2);
+    const ncNet = nc.net[last], ncNetChg = ncNet - nc.net[prev];
+    const ncLP = pctile(nc.long, nc.long[last]);
+    const ncSP = pctile(nc.short, nc.short[last]);
+    const ncNP = pctile(nc.net, ncNet);
+    const oi = ref.oi[last] || 0;
+    const summ = `<strong>Week of ${nc.dates[last].split('T')[0]}:</strong> Non-Commercial net position is `+
+      `<strong style="color:${ncNet>=0?'#27ae60':'#e74c3c'}">${ncNet.toLocaleString()}</strong> contracts`+
+      ` (${ncNetChg>=0?'+':''}${ncNetChg.toLocaleString()} w/w), at the <strong>${ncNP.toFixed(0)}th percentile</strong> of historical range.`+
+      ` Gross long at ${ncLP.toFixed(0)}th %ile (${nc.long[last].toLocaleString()}), gross short at ${ncSP.toFixed(0)}th %ile (${nc.short[last].toLocaleString()}).`+
+      ` Total OI: ${oi.toLocaleString()}.`;
+    document.getElementById('weeklyDetailSummary').innerHTML = summ;
+  }
+}
+
+/* ─── Executive Summary ─── */
+function populateExecSummary(data) {
+  if (!data || !data.length) return;
+  document.getElementById('execSummary').style.display = 'block';
+
+  const gs   = data.slice().sort((a,b) => b.mSP  - a.mSP);   // gross short %ile desc
+  const ns   = data.slice().sort((a,b) => a.mNP  - b.mNP);   // net: lowest net %ile first
+  const gl   = data.slice().sort((a,b) => a.mLP  - b.mLP);   // gross long %ile asc
+  const gsOI = data.slice().sort((a,b) => b.mSPoi - a.mSPoi);
+  const nsOI = data.slice().sort((a,b) => a.mNPoi - b.mNPoi);
+  const glOI = data.slice().sort((a,b) => a.mLPoi - b.mLPoi);
+
+  function pctColor(pct, r, g, b) {
+    const alpha = 0.08 + 0.52*(pct/100);
+    return `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+  }
+  function fillTbl(id, arr, field, r, g, b, invert) {
+    const tb = document.getElementById(id); tb.innerHTML='';
+    arr.forEach(item => {
+      const v = invert ? (100 - item[field]) : item[field];
+      const pct = Math.max(0, Math.min(100, v));
+      const bg = pctColor(pct, r, g, b);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${item.commodity}</td><td style="background:${bg};color:#1a1a1a;">${pct.toFixed(1)}%</td>`;
+      tb.appendChild(tr);
+    });
+  }
+  fillTbl('tblGrossShort', gs,   'mSP',   231,76,60,  false);
+  fillTbl('tblNetShort',   ns,   'mNP',   243,156,18, true);
+  fillTbl('tblGrossLong',  gl,   'mLP',   39,174,96,  false);
+  fillTbl('tblShortOI',    gsOI, 'mSPoi', 169,50,38,  false);
+  fillTbl('tblNetOI',      nsOI, 'mNPoi', 183,149,11, true);
+  fillTbl('tblLongOI',     glOI, 'mLPoi', 30,132,73,  false);
+
+  // Analysis text
+  const extShort=[], extLong=[], crowdedShort=[], crowdedLong=[];
+  const longCands=[], shortCands=[];
+  data.forEach(d => {
+    if (d.mSP >= 80) extShort.push(d.commodity);
+    if (d.mLP >= 80) extLong.push(d.commodity);
+    if (d.mNP <= 15) crowdedShort.push(d.commodity);
+    if (d.mNP >= 85) crowdedLong.push(d.commodity);
+    if (d.mSP >= 75 && d.mNP <= 25) longCands.push(d.commodity);
+    if (d.mLP >= 75 && d.mNP >= 75) shortCands.push(d.commodity);
+  });
+
+  let txt = '<strong>CIT Non-Commercial Positioning Analysis (Historical Percentile Since 2019):</strong><br>';
+  txt += 'Non-commercial (speculative) extremes in the CIT Supplemental Report provide contrarian signals. ';
+  txt += 'Maximum speculative shorts create fuel for short-covering rallies; maximum longs risk liquidation cascades.<br><br>';
+  if (extShort.length)    txt += `<strong>🔴 Extreme Gross Short (&gt;80th %ile):</strong> ${extShort.join(', ')} — Limited room to add shorts; contrarian LONG bias.<br>`;
+  if (crowdedShort.length) txt += `<strong>🟠 Extreme Net Short (&lt;15th %ile):</strong> ${crowdedShort.join(', ')} — Most bearish positioning; short-covering risk elevated.<br>`;
+  if (extLong.length)     txt += `<strong>🟢 Extreme Gross Long (&gt;80th %ile):</strong> ${extLong.join(', ')} — Crowded long; vulnerable to liquidation-driven selloff.<br>`;
+  if (crowdedLong.length) txt += `<strong>🔵 Extreme Net Long (&gt;85th %ile):</strong> ${crowdedLong.join(', ')} — Maximum bullish positioning; contrarian SHORT bias.<br>`;
+  txt += '<br>';
+  if (longCands.length)  txt += `<strong>✅ Long Candidates (high short + low net):</strong> ${longCands.join(', ')}<br>`;
+  if (shortCands.length) txt += `<strong>❌ Short Candidates (high long + high net):</strong> ${shortCands.join(', ')}<br>`;
+  if (!longCands.length && !shortCands.length) txt += 'No commodities currently exhibit simultaneously extreme gross + net positioning for clear contrarian trades.';
+  document.getElementById('execAnalysisText').innerHTML = txt;
+}
+
+/* ─── charts ─── */
+function updateAllCharts() { updatePositionChart(); updateTraderChart(); updateCompareChart(); updateSeasonalityChart(); }
+
+function updatePositionChart() {
+  if (!currentData) return;
+  const metric = document.getElementById('positionMetric').value;
+  const ctx = document.getElementById('positionChart').getContext('2d');
+  if (charts.position) charts.position.destroy();
+  let values, label, color, isPct=false, showZero=false;
+  switch(metric) {
+    case 'net':     values=currentData.net;    label='Net Position'; color='#0f3460'; showZero=true; break;
+    case 'long':    values=currentData.long;   label='Long';   color='#27ae60'; break;
+    case 'short':   values=currentData.short;  label='Short';  color='#e74c3c'; break;
+    case 'spread':  values=currentData.spread; label='Spreading'; color='#f39c12'; break;
+    case 'net_pct': values=currentData.netPct; label='Net % OI'; color='#0f3460'; isPct=true; showZero=true; break;
+  }
+  const datasets = [{ label, data: currentData.dates.map((d,i)=>({x:d,y:values[i]})), borderColor:color, backgroundColor:color+'20', borderWidth:2, fill:true, tension:0.4, pointRadius:0, pointHoverRadius:6 }];
+  if (showZero) datasets.push({ label:'Zero', data:currentData.dates.map(d=>({x:d,y:0})), borderColor:'rgba(231,76,60,0.3)', borderWidth:2, borderDash:[5,5], pointRadius:0, fill:false });
+  charts.position = new Chart(ctx, { type:'line', data:{datasets}, options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{legend:{display:false}}, scales:{ x:{type:'time',time:{unit:'month',displayFormats:{month:'MMM yyyy'}}}, y:{title:{display:true,text:isPct?'% of OI':'Contracts'}} } } });
+  document.getElementById('positionLegend').style.display = showZero ? 'flex' : 'none';
+}
+
+function updateTraderChart() {
+  if (!currentData) return;
+  const metric = document.getElementById('traderMetric').value;
+  const ctx = document.getElementById('traderChart').getContext('2d');
+  if (charts.trader) charts.trader.destroy();
+  let datasets=[];
+  switch(metric) {
+    case 'total': datasets=[{label:'Total Traders',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersTotal[i]})),borderColor:'#0f3460',fill:true}]; break;
+    case 'long':  datasets=[{label:'Long Traders', data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersLong[i]})), borderColor:'#27ae60',fill:true}]; break;
+    case 'short': datasets=[{label:'Short Traders',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersShort[i]})),borderColor:'#e74c3c',fill:true}]; break;
+    case 'both':  datasets=[
+      {label:'Long', data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersLong[i]})), borderColor:'#27ae60',fill:false},
+      {label:'Short',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersShort[i]})),borderColor:'#e74c3c',fill:false}
+    ]; break;
+  }
+  charts.trader = new Chart(ctx, { type:'line', data:{datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:metric==='both'}}, scales:{x:{type:'time',time:{unit:'month'}}} } });
+}
+
+function updateCompareChart() {
+  if (!allTraderData) return;
+  const metric = document.getElementById('compareMetric').value;
+  const ctx = document.getElementById('compareChart').getContext('2d');
+  if (charts.compare) charts.compare.destroy();
+  const datasets = Object.entries(allTraderData).filter(([,d])=>d!==null).map(([key,data]) => {
+    let vals = metric==='net'?data.net:metric==='long'?data.long:metric==='short'?data.short:data.netPct;
+    return { label:CATEGORY_LABELS[key], data:data.dates.map((d,i)=>({x:d,y:vals[i]})), borderColor:CATEGORY_COLORS[key], borderWidth:2, fill:false, pointRadius:0 };
+  });
+  charts.compare = new Chart(ctx, { type:'line', data:{datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{x:{type:'time',time:{unit:'month'}}} } });
+}
+
+/* ─── Seasonality ─── */
+function buildCommoditySelector() {
+  const commodities = availableCommodities.length > 0 ? availableCommodities : ALL_13_COMMODITIES;
+  const container = document.getElementById('commoditySelector');
+  while (container.children.length > 2) container.removeChild(container.lastChild);
+
+  const btnAll = document.createElement('button');
+  btnAll.type='button'; btnAll.className='chip-all commodity-chip'; btnAll.textContent='✅ ALL';
+  btnAll.style.cssText='margin-top:0;min-width:auto;';
+  btnAll.onclick = () => { selectedSeasonalityCommodities = new Set(commodities); refreshChipStyles(); updateSeasonalityChart(); };
+  container.appendChild(btnAll);
+
+  const btnNone = document.createElement('button');
+  btnNone.type='button'; btnNone.className='chip-none commodity-chip'; btnNone.textContent='✕ NONE';
+  btnNone.style.cssText='margin-top:0;min-width:auto;';
+  btnNone.onclick = () => { selectedSeasonalityCommodities = new Set([commodities[0]]); refreshChipStyles(); updateSeasonalityChart(); };
+  container.appendChild(btnNone);
+
+  const sectors = { 'Grains': ['WHEAT','CORN','SOYBEAN'], 'Softs': ['COTTON','COCOA','SUGAR','COFFEE'], 'Livestock': ['HOGS','CATTLE'] };
+  const grouped={}, other=[];
+  commodities.forEach(c => {
+    const name=c.toUpperCase(); let found=false;
+    for (const [sector,kws] of Object.entries(sectors)) {
+      if (kws.some(k=>name.includes(k))) { if(!grouped[sector])grouped[sector]=[]; grouped[sector].push(c); found=true; break; }
+    }
+    if (!found) other.push(c);
+  });
+  if (selectedSeasonalityCommodities.size === 0) {
+    const cur = currentData ? currentData.commodity : null;
+    const defaults = cur ? [cur] : [];
+    for (let i=0; i<commodities.length && defaults.length<4; i++) if (!defaults.includes(commodities[i])) defaults.push(commodities[i]);
+    selectedSeasonalityCommodities = new Set(defaults);
+  }
+  const addChips = list => list.forEach(commodity => {
+    const chip = document.createElement('span');
+    chip.className='commodity-chip'; chip.dataset.commodity=commodity;
+    chip.textContent=commodity.split(' - ')[0]; chip.title=commodity;
+    chip.onclick = () => {
+      if (selectedSeasonalityCommodities.has(commodity)) { if(selectedSeasonalityCommodities.size>1) selectedSeasonalityCommodities.delete(commodity); }
+      else selectedSeasonalityCommodities.add(commodity);
+      refreshChipStyles(); updateSeasonalityChart();
+    };
+    container.appendChild(chip);
+  });
+  Object.entries(grouped).forEach(([sector,items]) => {
+    if (!items.length) return;
+    const lbl=document.createElement('span'); lbl.textContent=`— ${sector} —`; lbl.style.cssText='font-size:0.75em;color:#888;align-self:center;white-space:nowrap;'; container.appendChild(lbl);
+    addChips(items);
+  });
+  if (other.length) {
+    const lbl=document.createElement('span'); lbl.textContent='— Other —'; lbl.style.cssText='font-size:0.75em;color:#888;align-self:center;white-space:nowrap;'; container.appendChild(lbl);
+    addChips(other);
+  }
+  refreshChipStyles();
+}
+
+function refreshChipStyles() {
+  const container = document.getElementById('commoditySelector');
+  Array.from(container.querySelectorAll('[data-commodity]')).forEach(chip => chip.classList.toggle('active', selectedSeasonalityCommodities.has(chip.dataset.commodity)));
+  const count = selectedSeasonalityCommodities.size;
+  const total = (availableCommodities.length||ALL_13_COMMODITIES.length);
+  document.getElementById('selectionCount').textContent = `(${count} of ${total} selected${count===total?' — ALL':''})`;
+}
+
+function populateYearSelector() {
+  if (!currentData) return;
+  const years = [...new Set(currentData.dates.map(d=>new Date(d).getFullYear()))].sort();
+  const container = document.getElementById('yearSelector');
+  container.innerHTML='<strong style="width:100%;">Select Years:</strong>';
+  selectedYears = new Set(years.slice(-3));
+  years.forEach(year => {
+    const chip = document.createElement('div');
+    chip.className='year-chip'+(selectedYears.has(year)?' active':'');
+    chip.textContent=year;
+    chip.onclick = () => {
+      if (selectedYears.has(year)&&selectedYears.size>1) { selectedYears.delete(year); chip.classList.remove('active'); }
+      else if (!selectedYears.has(year)) { selectedYears.add(year); chip.classList.add('active'); }
+      updateSeasonalityChart();
+    };
+    container.appendChild(chip);
+  });
+}
+
+function buildYearSelectorStandalone() {
+  const container = document.getElementById('yearSelector');
+  container.innerHTML='<strong style="width:100%;">Select Years:</strong>';
+  const now=new Date().getFullYear(), years=[now-4,now-3,now-2,now-1,now];
+  years.forEach(year => {
+    const chip=document.createElement('div');
+    chip.className='year-chip'+(selectedYears.has(year)?' active':'');
+    chip.textContent=year;
+    chip.onclick=()=>{ if(selectedYears.has(year)&&selectedYears.size>1){selectedYears.delete(year);chip.classList.remove('active');}else if(!selectedYears.has(year)){selectedYears.add(year);chip.classList.add('active');}updateSeasonalityChart(); };
+    container.appendChild(chip);
+  });
+}
+
+async function updateSeasonalityChart() {
+  const metric=document.getElementById('seasonalityMetric').value;
+  const aggMode=document.getElementById('seasonalityAgg').value;
+  const ctx=document.getElementById('seasonalityChart').getContext('2d');
+  if (charts.seasonality) charts.seasonality.destroy();
+  const commoditiesArray=Array.from(selectedSeasonalityCommodities);
+  if (!commoditiesArray.length) return;
+  if (!document.querySelector('#yearSelector .year-chip')) buildYearSelectorStandalone();
+  if (selectedYears.size===0) return;
+  const traderCat=document.getElementById('traderCategory').value;
+  for (const commodity of commoditiesArray) {
+    if (!seasonalityCache[commodity]) {
+      try {
+        const query=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '2019-01-01'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;
+        const res=await fetch(`${API_ENDPOINT}?${query}`);
+        const data=await res.json();
+        if (data.length>0) seasonalityCache[commodity]=processData(data,traderCat);
+      } catch(e) { console.warn('Fetch failed:',commodity,e); }
+    }
+  }
+  const yearData={};
+  for (const commodity of commoditiesArray) {
+    const proc=seasonalityCache[commodity];
+    if (!proc) continue;
+    proc.dates.forEach((dateStr,idx)=>{
+      const year=new Date(dateStr).getFullYear();
+      if (!selectedYears.has(year)) return;
+      const week=getWeekNumber(new Date(dateStr));
+      if (!yearData[year]) yearData[year]={};
+      if (!yearData[year][week]) yearData[year][week]={sum:0,count:0};
+      let val=0;
+      if (metric==='net') val=proc.net[idx];
+      else if (metric==='long') val=proc.long[idx];
+      else if (metric==='short') val=proc.short[idx];
+      else if (metric==='traders_total') val=proc.tradersTotal[idx];
+      yearData[year][week].sum+=val; yearData[year][week].count+=1;
+    });
+  }
+  const yearColors=['#e74c3c','#e67e22','#f39c12','#27ae60','#2980b9','#8e44ad','#16a085','#d35400','#c0392b','#1abc9c'];
+  const datasets=[];
+  [...selectedYears].sort().forEach((year,idx)=>{
+    if (!yearData[year]) return;
+    const weeklyData=new Array(53).fill(null);
+    for (let w=1;w<=53;w++) { const e=yearData[year][w]; if(!e||e.count===0) continue; weeklyData[w-1]=aggMode==='sum'?e.sum:(e.sum/e.count); }
+    const color=yearColors[idx%yearColors.length];
+    datasets.push({label:String(year),data:weeklyData,borderColor:color,backgroundColor:color+'25',borderWidth:2.5,pointRadius:3,pointHoverRadius:6,spanGaps:true,fill:false,tension:0.3});
+  });
+  const isAll=commoditiesArray.length===(availableCommodities.length||ALL_13_COMMODITIES.length);
+  const commLabel=isAll?`All ${commoditiesArray.length} commodities`:`${commoditiesArray.length} commodit${commoditiesArray.length>1?'ies':'y'}: ${commoditiesArray.map(c=>c.split(' - ')[0]).join(', ')}`;
+  document.getElementById('seasonalityNote').innerHTML=`<strong>Showing:</strong> ${commLabel} &nbsp;|&nbsp; <strong>Metric:</strong> ${metric} &nbsp;|&nbsp; <strong>Agg:</strong> ${aggMode==='sum'?'∑ Sum':'Avg'}`;
+  const metricLabels={net:'Net Position',long:'Long Positions',short:'Short Positions',traders_total:'Total Traders'};
+  charts.seasonality=new Chart(ctx,{type:'line',data:{labels:Array.from({length:53},(_,i)=>'W'+(i+1)),datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{title:{display:true,text:`${commLabel} — Weekly ${metricLabels[metric]} (${aggMode==='sum'?'Summed':'Averaged'})`,font:{size:13,weight:'bold'}},legend:{position:'top',labels:{boxWidth:14,font:{size:11}}},tooltip:{callbacks:{title:items=>`Week ${parseInt(items[0].label.replace('W',''))}`,label:item=>`${item.dataset.label}: ${Number(item.raw).toLocaleString(undefined,{maximumFractionDigits:0})}`}}},scales:{x:{title:{display:true,text:'Week of Year'},ticks:{callback:(v,i)=>i%4===0?'W'+(i+1):''}},y:{title:{display:true,text:aggMode==='sum'?`${metricLabels[metric]} (Sum)`:`${metricLabels[metric]} (Avg)`}}}}});
+}
+
+/* ─── scatter ─── */
+async function generateScatterPlot() {
+  showLoading(true, 'Generating scatter plots...');
+  document.getElementById('chart5').style.display = 'block';
+  scatterData = [];
+  const commodities = availableCommodities.length > 5 ? availableCommodities : ALL_13_COMMODITIES;
+  for (let i=0; i<Math.min(commodities.length,15); i++) {
+    const commodity = commodities[i];
+    document.getElementById('loadingText').textContent = `Analyzing ${i+1}/${Math.min(commodities.length,15)}: ${commodity.split(' - ')[0]}...`;
+    try {
+      const query=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '2019-01-01'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;
+      const res=await fetch(`${API_ENDPOINT}?${query}`);
+      const data=await res.json();
+      if (data.length < 10) continue;
+      const comm=processData(data,'commercial'), noncomm=processData(data,'noncommercial');
+      if (!comm||!noncomm) continue;
+      const cp=(vals,curr)=>{const s=[...vals].sort((a,b)=>a-b);return(s.indexOf(curr)/(s.length-1))*100;};
+      const ncShort=noncomm.short[noncomm.short.length-1], ncLong=noncomm.long[noncomm.long.length-1];
+      const ncNet=noncomm.net[noncomm.net.length-1];
+      scatterData.push({commodity:commodity.split(' - ')[0], index:i,
+        commShortPct:cp(comm.short,comm.short[comm.short.length-1]),
+        noncommShortPct:cp(noncomm.short,ncShort),
+        noncommLongPct:cp(noncomm.long,ncLong),
+        commLongPct:cp(comm.long,comm.long[comm.long.length-1]),
+        commNetPct:cp(comm.net,comm.net[comm.net.length-1]),
+        noncommNetPct:cp(noncomm.net,ncNet),
+        commShort:comm.short[comm.short.length-1], noncommShort:ncShort,
+        commLong:comm.long[comm.long.length-1],    noncommLong:ncLong,
+        commNet:comm.net[comm.net.length-1],       noncommNet:ncNet,
+        // for exec summary
+        mSP:cp(noncomm.short,ncShort), mLP:cp(noncomm.long,ncLong), mNP:cp(noncomm.net,ncNet),
+        mSPoi:cp(noncomm.shortPct,noncomm.shortPct[noncomm.shortPct.length-1]),
+        mLPoi:cp(noncomm.longPct,noncomm.longPct[noncomm.longPct.length-1]),
+        mNPoi:cp(noncomm.netPct,noncomm.netPct[noncomm.netPct.length-1])
+      });
+    } catch(e) { console.error(e); }
+  }
+  updateAllScatterCharts();
+  renderScatterLegend('scatterLegendContainer', scatterData);
+  populateExecSummary(scatterData);
+  showLoading(false);
+}
+
+function updateAllScatterCharts() {
+  if (!scatterData.length) return;
+  const combos=[
+    {id:'scatterChart1',x:'commShortPct',y:'noncommShortPct',xL:'Comm Short',    yL:'Non-Comm Short',xR:'commShort',  yR:'noncommShort'},
+    {id:'scatterChart2',x:'commShortPct',y:'noncommLongPct', xL:'Comm Short',    yL:'Non-Comm Long', xR:'commShort',  yR:'noncommLong'},
+    {id:'scatterChart3',x:'commLongPct', y:'noncommShortPct',xL:'Comm Long',     yL:'Non-Comm Short',xR:'commLong',   yR:'noncommShort'},
+    {id:'scatterChart4',x:'commLongPct', y:'noncommLongPct', xL:'Comm Long',     yL:'Non-Comm Long', xR:'commLong',   yR:'noncommLong'},
+    {id:'scatterChart5',x:'commNetPct',  y:'noncommNetPct',  xL:'Comm Net',      yL:'Non-Comm Net',  xR:'commNet',    yR:'noncommNet'},
+    {id:'scatterChart6',x:'commNetPct',  y:'noncommNetPct',  xL:'Comm Net',      yL:'Non-Comm Net',  xR:'commNet',    yR:'noncommNet'}
+  ];
+  combos.forEach((c,idx)=>{
+    const ctx=document.getElementById(c.id).getContext('2d');
+    if(charts['scatter'+(idx+1)])charts['scatter'+(idx+1)].destroy();
+    const datasets=scatterData.map(item=>({label:item.commodity,data:[{x:item[c.x],y:item[c.y],commodity:item.commodity,xVal:item[c.xR],yVal:item[c.yR]}],backgroundColor:getCommodityColor(item.index),borderColor:getCommodityColor(item.index),pointStyle:getCommodityShape(item.index),pointRadius:10,pointHoverRadius:14,borderWidth:2}));
+    datasets.push({data:[{x:50,y:0},{x:50,y:100}],borderColor:'rgba(0,0,0,0.3)',borderDash:[5,5],pointRadius:0,fill:false,showLine:true});
+    datasets.push({data:[{x:0,y:50},{x:100,y:50}],borderColor:'rgba(0,0,0,0.3)',borderDash:[5,5],pointRadius:0,fill:false,showLine:true});
+    charts['scatter'+(idx+1)]=new Chart(ctx,{type:'scatter',data:{datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>i[0].raw.commodity,label:i=>[`${c.xL}: ${i.raw.xVal.toLocaleString()} (${i.raw.x.toFixed(1)}%)`,`${c.yL}: ${i.raw.yVal.toLocaleString()} (${i.raw.y.toFixed(1)}%)`]}}},scales:{x:{min:0,max:100,title:{display:true,text:`${c.xL} (%ile)`}},y:{min:0,max:100,title:{display:true,text:`${c.yL} (%ile)`}}}}});
+  });
+}
+
+function renderScatterLegend(containerId, data) {
+  const container=document.getElementById(containerId); container.innerHTML='';
+  data.forEach(item=>{
+    const color=getCommodityColor(item.index);
+    const li=document.createElement('div'); li.className='commodity-legend-item';
+    li.innerHTML=`<div style="background:${color};width:12px;height:12px;border-radius:2px;display:inline-block;margin-right:6px;"></div><span>${item.commodity}</span>`;
+    container.appendChild(li);
+  });
+}
+
+async function generateScatterPctPlot() {
+  showLoading(true, 'Generating % of OI scatter plots...');
+  document.getElementById('chart6').style.display='block';
+  scatterPctData=[];
+  const commodities=availableCommodities.length>5?availableCommodities:ALL_13_COMMODITIES;
+  for (let i=0;i<Math.min(commodities.length,15);i++){
+    const commodity=commodities[i];
+    document.getElementById('loadingText').textContent=`Analyzing % OI ${i+1}/${Math.min(commodities.length,15)}: ${commodity.split(' - ')[0]}...`;
+    try {
+      const query=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '2019-01-01'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;
+      const res=await fetch(`${API_ENDPOINT}?${query}`);
+      const data=await res.json();
+      if (data.length<10) continue;
+      const comm=processData(data,'commercial'),noncomm=processData(data,'noncommercial');
+      if (!comm||!noncomm) continue;
+      const cp=(vals,curr)=>{const s=[...vals].sort((a,b)=>a-b);return(s.indexOf(curr)/(s.length-1))*100;};
+      scatterPctData.push({commodity:commodity.split(' - ')[0],index:i,
+        commShortPctOI:cp(comm.shortPct,comm.shortPct[comm.shortPct.length-1]),
+        noncommShortPctOI:cp(noncomm.shortPct,noncomm.shortPct[noncomm.shortPct.length-1]),
+        noncommLongPctOI:cp(noncomm.longPct,noncomm.longPct[noncomm.longPct.length-1]),
+        commLongPctOI:cp(comm.longPct,comm.longPct[comm.longPct.length-1]),
+        commNetPctOI:cp(comm.netPct,comm.netPct[comm.netPct.length-1]),
+        noncommNetPctOI:cp(noncomm.netPct,noncomm.netPct[noncomm.netPct.length-1]),
+        commShortPct:comm.shortPct[comm.shortPct.length-1], noncommShortPct:noncomm.shortPct[noncomm.shortPct.length-1],
+        commLongPct:comm.longPct[comm.longPct.length-1],    noncommLongPct:noncomm.longPct[noncomm.longPct.length-1],
+        commNetPct:comm.netPct[comm.netPct.length-1],       noncommNetPct:noncomm.netPct[noncomm.netPct.length-1]
+      });
+    } catch(e){console.error(e);}
+  }
+  updateAllScatterPctCharts(); renderScatterLegend('scatterPctLegendContainer',scatterPctData); showLoading(false);
+}
+
+function updateAllScatterPctCharts() {
+  if (!scatterPctData.length) return;
+  const combos=[
+    {id:'scatterPctChart1',x:'commShortPctOI',y:'noncommShortPctOI',xL:'Comm Short %',yL:'Non-Comm Short %',xR:'commShortPct',yR:'noncommShortPct'},
+    {id:'scatterPctChart2',x:'commShortPctOI',y:'noncommLongPctOI', xL:'Comm Short %',yL:'Non-Comm Long %', xR:'commShortPct',yR:'noncommLongPct'},
+    {id:'scatterPctChart3',x:'commLongPctOI', y:'noncommShortPctOI',xL:'Comm Long %', yL:'Non-Comm Short %',xR:'commLongPct', yR:'noncommShortPct'},
+    {id:'scatterPctChart4',x:'commLongPctOI', y:'noncommLongPctOI', xL:'Comm Long %', yL:'Non-Comm Long %', xR:'commLongPct', yR:'noncommLongPct'},
+    {id:'scatterPctChart5',x:'commNetPctOI',  y:'noncommNetPctOI',  xL:'Comm Net %',  yL:'Non-Comm Net %',  xR:'commNetPct',  yR:'noncommNetPct'},
+    {id:'scatterPctChart6',x:'commNetPctOI',  y:'noncommNetPctOI',  xL:'Comm Net %',  yL:'Non-Comm Net %',  xR:'commNetPct',  yR:'noncommNetPct'}
+  ];
+  combos.forEach((c,idx)=>{
+    const ctx=document.getElementById(c.id).getContext('2d');
+    if(charts['scatterPct'+(idx+1)])charts['scatterPct'+(idx+1)].destroy();
+    const datasets=scatterPctData.map(item=>({label:item.commodity,data:[{x:item[c.x],y:item[c.y],commodity:item.commodity,xVal:item[c.xR],yVal:item[c.yR]}],backgroundColor:getCommodityColor(item.index),borderColor:getCommodityColor(item.index),pointStyle:getCommodityShape(item.index),pointRadius:10,pointHoverRadius:14,borderWidth:2}));
+    datasets.push({data:[{x:50,y:0},{x:50,y:100}],borderColor:'rgba(0,0,0,0.3)',borderDash:[5,5],pointRadius:0,fill:false,showLine:true});
+    datasets.push({data:[{x:0,y:50},{x:100,y:50}],borderColor:'rgba(0,0,0,0.3)',borderDash:[5,5],pointRadius:0,fill:false,showLine:true});
+    charts['scatterPct'+(idx+1)]=new Chart(ctx,{type:'scatter',data:{datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>i[0].raw.commodity,label:i=>[`${c.xL}: ${i.raw.xVal.toFixed(2)}% (${i.raw.x.toFixed(1)}%ile)`,`${c.yL}: ${i.raw.yVal.toFixed(2)}% (${i.raw.y.toFixed(1)}%ile)`]}}},scales:{x:{min:0,max:100,title:{display:true,text:`${c.xL} (%ile)`}},y:{min:0,max:100,title:{display:true,text:`${c.yL} (%ile)`}}}}});
+  });
+}
+
+/* ─── summary ─── */
+async function generateSummary() {
+  showLoading(true,'Generating summary...');
+  document.getElementById('summarySection').style.display='block';
+  summaryData=[];
+  const commodities=availableCommodities.length>0?availableCommodities:ALL_13_COMMODITIES;
+  for (let i=0;i<commodities.length;i++){
+    const commodity=commodities[i];
+    for (const cat of ['noncommercial','commercial','index_traders','nonreportable']){
+      document.getElementById('loadingText').textContent=`Loading ${i+1}/${commodities.length}: ${commodity.split(' - ')[0]}...`;
+      try {
+        const query=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '2020-01-01'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;
+        const res=await fetch(`${API_ENDPOINT}?${query}`);
+        const data=await res.json();
+        if (!data.length) continue;
+        const p=processData(data,cat); if (!p) continue;
+        const last=p.net.length-1;
+        summaryData.push({commodity:commodity.split(' - ')[0],category:CATEGORY_LABELS[cat],catKey:cat,
+          net:p.net[last],netMin:Math.min(...p.net),netMax:Math.max(...p.net),
+          long:p.long[last],longMin:Math.min(...p.long),longMax:Math.max(...p.long),
+          short:p.short[last],shortMin:Math.min(...p.short),shortMax:Math.max(...p.short),
+          netPct:p.netPct[last],netPctMin:Math.min(...p.netPct),netPctMax:Math.max(...p.netPct),
+          longPct:p.longPct[last],longPctMin:Math.min(...p.longPct),longPctMax:Math.max(...p.longPct),
+          shortPct:p.shortPct[last],shortPctMin:Math.min(...p.shortPct),shortPctMax:Math.max(...p.shortPct)
+        });
+      } catch(e){}
+    }
+  }
+  renderSummaryTable(); showLoading(false);
+}
+
+function renderSummaryTable() {
+  const tbody=document.getElementById('summaryTableBody'); tbody.innerHTML='';
+  if (!summaryData.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;">No data</td></tr>';return;}
+  summaryData.sort((a,b)=>a.commodity.localeCompare(b.commodity));
+  let current='';
+  summaryData.forEach(item=>{
+    const show=item.commodity!==current; current=item.commodity;
+    const row=document.createElement('tr');
+    row.innerHTML=`<td class="commodity-name">${show?item.commodity:''}</td><td style="font-weight:600;color:${CATEGORY_COLORS[item.catKey]||'#333'}">${item.category}</td>`+
+      `<td class="minmax-cell">${minMaxBar(item.net,item.netMin,item.netMax,true)}</td><td class="data-cell ${item.net>0?'positive-value':'negative-value'}">${item.net.toLocaleString()}</td>`+
+      `<td class="minmax-cell">${minMaxBar(item.long,item.longMin,item.longMax,false)}</td><td class="data-cell positive-value">${item.long.toLocaleString()}</td>`+
+      `<td class="minmax-cell">${minMaxBar(item.short,item.shortMin,item.shortMax,false)}</td><td class="data-cell negative-value">${item.short.toLocaleString()}</td>`+
+      `<td class="minmax-cell">${minMaxBar(item.netPct,item.netPctMin,item.netPctMax,true)}</td><td class="data-cell ${item.netPct>0?'positive-value':'negative-value'}">${item.netPct.toFixed(1)}%</td>`+
+      `<td class="minmax-cell">${minMaxBar(item.longPct,item.longPctMin,item.longPctMax,false)}</td><td class="data-cell positive-value">${item.longPct.toFixed(1)}%</td>`+
+      `<td class="minmax-cell">${minMaxBar(item.shortPct,item.shortPctMin,item.shortPctMax,false)}</td><td class="data-cell negative-value">${item.shortPct.toFixed(1)}%</td>`;
+    tbody.appendChild(row);
+  });
+}
+
+function minMaxBar(current, min, max, isNet) {
+  if (min===max) return '<div class="minmax-bar-container"><div class="minmax-bar-bg"></div></div>';
+  const pct=((current-min)/(max-min))*100;
+  const color=isNet?(current>=0?'#27ae60':'#e74c3c'):'#2c3e50';
+  const f=n=>Math.abs(n)>=1000?(n/1000).toFixed(1)+'k':n.toLocaleString();
+  return `<div class="minmax-bar-container"><div class="minmax-bar-bg"></div><div class="minmax-current" style="left:${Math.max(5,Math.min(95,pct))}%;background:${color};"></div></div><div class="minmax-labels"><span>${f(min)}</span><span>${f(max)}</span></div>`;
+}
+
+function refreshSummary() { generateSummary(); }
+
+function downloadCSV() {
+  if (!currentData){showError('No data');return;}
+  let csv='Date,Long,Short,Net,Spread,OI\n';
+  for (let i=0;i<currentData.dates.length;i++) csv+=`${currentData.dates[i]},${currentData.long[i]},${currentData.short[i]},${currentData.net[i]},${currentData.spread[i]},${currentData.oi[i]}\n`;
+  const blob=new Blob([csv],{type:'text/csv'});
+  const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`CFTC_CIT_${new Date().toISOString().split('T')[0]}.csv`; link.click();
+}
+
+function toggleDebug() {
+  const panel=document.getElementById('debugPanel');
+  panel.style.display=panel.style.display==='none'?'block':'none';
+  const content=document.getElementById('debugContent');
+  if (!debugInfo.lastUrl){content.innerHTML='<p>No data fetched yet.</p>';return;}
+  let html=`<p><strong>Last URL:</strong> ${debugInfo.lastUrl||'N/A'}</p><p><strong>Records:</strong> ${debugInfo.recordCount}</p>`;
+  if (debugInfo.allFields){html+='<h4>Fields:</h4><pre style="background:#1a252f;padding:10px;overflow:auto;max-height:200px;">';debugInfo.allFields.slice(0,30).forEach(f=>html+=f+'\n');html+='</pre>';}
+  content.innerHTML=html;
+}
 </script>
 </body>
 </html>
