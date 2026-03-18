@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CFTC Supplemental Report (CIT) Analyzer</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);min-height:100vh;color:#333}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+header{text-align:center;color:white;padding:30px 20px 20px;margin-bottom:20px}
+h1{font-size:2em;margin-bottom:8px;text-shadow:2px 2px 4px rgba(0,0,0,.3)}
+.subtitle{font-size:1em;opacity:.9;margin-bottom:15px}
+.info-box{background:rgba(255,255,255,.1);color:white;padding:12px;border-radius:8px;margin-bottom:20px;border-left:4px solid rgba(255,255,255,.5);font-size:.85em;line-height:1.5}
+.controls{background:rgba(255,255,255,.95);padding:18px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.2);margin-bottom:25px;display:flex;flex-wrap:wrap;gap:15px;align-items:center;justify-content:center}
+.control-group{display:flex;flex-direction:column;gap:6px}
+label{font-weight:600;color:#1a1a1a;font-size:.85em;text-transform:uppercase;letter-spacing:.5px}
+select,button,input[type="date"]{padding:10px 16px;border:2px solid #ccc;border-radius:8px;font-size:.95em;background:white;color:#1a1a1a}
+select:focus,input[type="date"]:focus{outline:none;border-color:#0f3460}
+button{background:#0f3460;color:white;border:none;cursor:pointer;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-top:18px}
+button:hover:not(:disabled){background:#1a1a2e;transform:translateY(-1px)}
+button:disabled{background:#95a5a6;cursor:not-allowed}
+.chart-section{background:white;padding:25px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.2);margin-bottom:25px;display:none}
+.chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px;border-bottom:2px solid #ecf0f1;padding-bottom:12px}
+.chart-title{font-size:1.2em;font-weight:700;color:#1a1a1a}
+.chart-controls{display:flex;gap:12px;align-items:center}
+.chart-controls label{font-size:.8em}
+.chart-controls select{min-width:140px;font-size:.85em;padding:6px 10px}
+.chart-container{position:relative;height:380px}
+.weekly-detail-tbl{width:100%;border-collapse:collapse;font-size:.78em}
+.weekly-detail-tbl th{padding:5px 6px;font-weight:600;font-size:.8em;text-align:center;color:white}
+.weekly-detail-tbl td{padding:4px 6px;text-align:right;font-family:monospace;font-size:.82em;border-bottom:1px solid #eee;color:#1a1a1a}
+.weekly-detail-tbl td:first-child{text-align:left;font-family:inherit;font-weight:600}
+.weekly-detail-tbl tr:nth-child(1){background:#f0f7ff}
+.weekly-detail-tbl .chg-row td{font-size:.75em;color:#666;border-bottom:2px solid #dee2e6}
+.cat-hdr.cat-nc,.sub-nc{background:#c0392b}
+.cat-hdr.cat-cm,.sub-cm{background:#27ae60}
+.cat-hdr.cat-it,.sub-it{background:#2980b9}
+.cat-hdr.cat-nr,.sub-nr{background:#7f8c8d}
+.weekly-detail-tbl th[rowspan]{background:#34495e}
+.val-pos{color:#27ae60}.val-neg{color:#e74c3c}
+.loading{display:none;text-align:center;padding:30px;color:white;font-size:1.1em}
+.spinner{border:4px solid rgba(255,255,255,.3);border-radius:50%;border-top:4px solid white;width:36px;height:36px;animation:spin 1s linear infinite;margin:0 auto 15px}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.error{background:#e74c3c;color:white;padding:15px;border-radius:8px;margin:15px 0;display:none;font-family:monospace;font-size:.85em}
+.summary-section{background:white;padding:25px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.2);margin-bottom:25px;display:none}
+.summary-table{width:100%;border-collapse:collapse;font-size:.8em}
+.summary-table th{background:#0f3460;color:white;padding:8px 6px;text-align:center;font-weight:600;position:sticky;top:0}
+.summary-table td{padding:6px;border-bottom:1px solid #ecf0f1;text-align:center;color:#1a1a1a}
+.summary-table tr:hover{background:#f0f4f8}
+.commodity-name{text-align:left!important;font-weight:600}
+.section-header{background:#34495e!important;color:white!important;font-weight:700;text-align:left!important;padding:8px!important}
+.positive-value{color:#27ae60;font-weight:600}.negative-value{color:#e74c3c;font-weight:600}
+.table-container{max-height:700px;overflow-y:auto;border-radius:8px;border:1px solid #dee2e6}
+.minmax-bar-container{width:100%;height:18px;background:#e9ecef;border-radius:9px;position:relative;margin:3px 0;overflow:hidden}
+.minmax-bar-bg{position:absolute;width:100%;height:100%;background:linear-gradient(90deg,rgba(192,57,43,.15) 0%,rgba(255,255,255,0) 50%,rgba(26,140,78,.15) 100%)}
+.minmax-current{position:absolute;width:10px;height:10px;background:#1a1a1a;border:2px solid white;border-radius:50%;top:50%;transform:translate(-50%,-50%);z-index:10}
+.minmax-labels{display:flex;justify-content:space-between;font-size:.65em;color:#555}
+.minmax-cell{min-width:80px}
+.year-selector{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:10px;background:#f8f9fa;border-radius:8px}
+.year-chip{padding:4px 10px;border:2px solid #ccc;border-radius:18px;cursor:pointer;font-size:.8em;background:white;color:#1a1a1a}
+.year-chip:hover{border-color:#0f3460;background:#e3f2fd}
+.year-chip.active{background:#0f3460;color:white;border-color:#0f3460}
+.commodity-selector{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;padding:10px;background:#e8f4fd;border-radius:8px;align-items:center}
+.commodity-selector-label{font-weight:700;font-size:.82em;color:#1565c0;width:100%;margin-bottom:4px}
+.commodity-chip{padding:4px 12px;border:2px solid #90caf9;border-radius:18px;cursor:pointer;font-size:.78em;background:white;user-select:none;color:#1a1a1a}
+.commodity-chip:hover{border-color:#1976d2;background:#bbdefb}
+.commodity-chip.active{background:#1976d2;color:white;border-color:#1976d2}
+.chip-all{background:#27ae60!important;color:white!important;border-color:#27ae60!important;font-weight:700}
+.chip-none{background:#e74c3c!important;color:white!important;border-color:#e74c3c!important;font-weight:700}
+.selection-count{font-size:.78em;color:#333;font-style:italic;margin-left:6px}
+@media(max-width:768px){h1{font-size:1.6em}.controls{flex-direction:column}.chart-container{height:280px}select,button{width:100%}}
+</style>
+<base target="_blank">
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>📊 CFTC Supplemental Report (CIT) Analyzer</h1>
+  <div class="subtitle">Commitments of Index Traders — Futures &amp; Options Combined</div>
+  <div class="info-box"><strong>Data Source:</strong> CFTC Supplemental Report (4zgm-a668) | <strong>Coverage:</strong> 13 agricultural commodities | <strong>Update:</strong> Weekly (Fri)</div>
+</header>
+<div class="controls">
+  <div class="control-group"><label>Commodity</label><select id="commoditySelect"><option value="">-- Loading... --</option></select></div>
+  <div class="control-group"><label>Or Enter Manually</label><input type="text" id="manualCommodity" placeholder="e.g., CORN - CHICAGO BOARD OF TRADE" style="padding:10px 16px;border:2px solid #ccc;border-radius:8px;font-size:.95em;min-width:280px"></div>
+  <div class="control-group"><label>Trader Category</label><select id="traderCategory"><option value="noncommercial" selected>Non-Commercial (NoCIT)</option><option value="commercial">Commercial (NoCIT)</option><option value="index_traders">Index Traders (CIT)</option><option value="nonreportable">Non-Reportable</option></select></div>
+  <div class="control-group"><label>Start Date</label><input type="date" id="startDate" value="2020-01-01"></div>
+  <div class="control-group"><label>End Date</label><input type="date" id="endDate"></div>
+  <button id="fetchBtn" onclick="fetchData()">📈 Generate Charts</button>
+  <button onclick="generateSummary()" style="background:#27ae60;">📋 Market Summary</button>
+  <button onclick="showSeasonalitySection()" style="background:#1565c0;">📅 Seasonality</button>
+  <button onclick="downloadCSV()" style="background:#8e44ad;">⬇️ CSV</button>
+</div>
+<div class="loading" id="loading"><div class="spinner"></div><div id="loadingText">Fetching CFTC data...</div></div>
+<div class="error" id="error"></div>
+
+<!-- 4-Week Detail -->
+<div class="chart-section" id="weeklyDetail">
+  <div class="chart-header"><div class="chart-title" id="weeklyDetailTitle">📋 4-Week Positioning Detail</div></div>
+  <div id="weeklyDetailSummary" style="padding:8px 12px;background:#f0f7ff;border-left:4px solid #0f3460;border-radius:4px;font-size:.85em;line-height:1.5;color:#1a1a1a;margin-bottom:10px;"></div>
+  <div style="overflow-x:auto">
+    <table class="weekly-detail-tbl" id="weeklyDetailTbl">
+      <thead>
+        <tr><th rowspan="2">Date</th><th colspan="3" class="cat-hdr cat-nc">Non-Commercial</th><th colspan="3" class="cat-hdr cat-cm">Commercial</th><th colspan="3" class="cat-hdr cat-it">Index Traders</th><th colspan="3" class="cat-hdr cat-nr">Non-Reportable</th><th rowspan="2">Total OI</th></tr>
+        <tr><th class="sub-nc">Long</th><th class="sub-nc">Short</th><th class="sub-nc">Net</th><th class="sub-cm">Long</th><th class="sub-cm">Short</th><th class="sub-cm">Net</th><th class="sub-it">Long</th><th class="sub-it">Short</th><th class="sub-it">Net</th><th class="sub-nr">Long</th><th class="sub-nr">Short</th><th class="sub-nr">Net</th></tr>
+      </thead>
+      <tbody id="weeklyDetailBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Main Charts -->
+<div class="chart-section" id="chart1">
+  <div class="chart-header"><div class="chart-title">📊 Position Analysis</div><div class="chart-controls"><label>Metric:</label><select id="positionMetric" onchange="updatePositionChart()"><option value="net">Net Position</option><option value="long">Long</option><option value="short">Short</option><option value="spread">Spreading</option><option value="net_pct">Net % of OI</option></select></div></div>
+  <div class="chart-container"><canvas id="positionChart"></canvas></div>
+</div>
+<div class="chart-section" id="chart2">
+  <div class="chart-header"><div class="chart-title">👥 Trader Count</div><div class="chart-controls"><label>Metric:</label><select id="traderMetric" onchange="updateTraderChart()"><option value="total">Total</option><option value="long">Long</option><option value="short">Short</option><option value="both">Both</option></select></div></div>
+  <div class="chart-container"><canvas id="traderChart"></canvas></div>
+</div>
+<div class="chart-section" id="chart3">
+  <div class="chart-header"><div class="chart-title">⚖️ All Trader Categories</div><div class="chart-controls"><label>Metric:</label><select id="compareMetric" onchange="updateCompareChart()"><option value="net">Net</option><option value="long">Long</option><option value="short">Short</option><option value="net_pct">Net % OI</option></select></div></div>
+  <div class="chart-container"><canvas id="compareChart"></canvas></div>
+</div>
+
+<!-- Seasonality -->
+<div class="chart-section" id="chart4">
+  <div class="chart-header"><div class="chart-title">📅 Weekly Seasonality (52-Week Pattern)</div><div class="chart-controls"><label>Metric:</label><select id="seasonalityMetric" onchange="updateSeasonalityChart()"><option value="net">Net Position</option><option value="long">Long</option><option value="short">Short</option><option value="traders_total">Total Traders</option></select><label style="margin-left:8px">Values:</label><select id="seasonalityAgg" onchange="updateSeasonalityChart()"><option value="sum">Sum</option><option value="avg">Average</option></select></div></div>
+  <div class="commodity-selector" id="commoditySelector"><div class="commodity-selector-label">📦 Select Commodities <span class="selection-count" id="selectionCount"></span></div></div>
+  <div class="year-selector" id="yearSelector"><strong style="width:100%">Select Years:</strong></div>
+  <div class="chart-container" style="height:500px"><canvas id="seasonalityChart"></canvas></div>
+  <div id="seasonalityNote" style="margin-top:10px;padding:10px;background:#f0f7ff;border-radius:6px;font-size:.85em;color:#1565c0"></div>
+</div>
+
+<!-- Summary Table -->
+<div class="summary-section" id="summarySection">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px"><div style="font-size:1.3em;font-weight:700;color:#1a1a1a">📋 Supplemental Report Market Summary</div><button onclick="refreshSummary()" style="padding:8px 15px;margin-top:0">🔄 Refresh</button></div>
+  <div class="table-container">
+    <table class="summary-table" id="summaryTable">
+      <thead><tr><th rowspan="2">Commodity</th><th rowspan="2">Category</th><th colspan="2">Net</th><th colspan="2">Long</th><th colspan="2">Short</th><th colspan="2">Net % OI</th></tr><tr><th>Range</th><th>Current</th><th>Range</th><th>Current</th><th>Range</th><th>Current</th><th>Range</th><th>Current</th></tr></thead>
+      <tbody id="summaryTableBody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<script>
+const API_ENDPOINT='https://publicreporting.cftc.gov/resource/4zgm-a668.json';
+const ALL_13=[
+  'CORN - CHICAGO BOARD OF TRADE','SOYBEANS - CHICAGO BOARD OF TRADE','SOYBEAN OIL - CHICAGO BOARD OF TRADE',
+  'SOYBEAN MEAL - CHICAGO BOARD OF TRADE','WHEAT-SRW - CHICAGO BOARD OF TRADE','WHEAT-HRW - CHICAGO BOARD OF TRADE',
+  'COTTON NO. 2 - ICE FUTURES U.S.','COCOA - ICE FUTURES U.S.','SUGAR NO. 11 - ICE FUTURES U.S.',
+  'COFFEE C - ICE FUTURES U.S.','LEAN HOGS - CHICAGO MERCANTILE EXCHANGE',
+  'LIVE CATTLE - CHICAGO MERCANTILE EXCHANGE','FEEDER CATTLE - CHICAGO MERCANTILE EXCHANGE'
+];
+const TRADER_FIELDS={
+  noncommercial:{long:['ncomm_postions_long_all_nocit'],short:['ncomm_postions_short_all_nocit'],spread:['ncomm_postions_spread_all_nocit'],traders_long:['traders_noncomm_long_all_nocit'],traders_short:['traders_noncomm_short_all_nocit']},
+  commercial:{long:['comm_positions_long_all_nocit'],short:['comm_positions_short_all_nocit'],spread:[],traders_long:['traders_comm_long_all_nocit'],traders_short:['traders_comm_short_all_nocit']},
+  index_traders:{long:['cit_positions_long_all'],short:['cit_positions_short_all'],spread:[],traders_long:['traders_cit_long_all'],traders_short:['traders_cit_short_all']},
+  nonreportable:{long:['nonrept_positions_long_all'],short:['nonrept_positions_short_all'],spread:[],traders_long:[],traders_short:[]}
+};
+const CAT_LABELS={noncommercial:'Non-Commercial',commercial:'Commercial',index_traders:'Index Traders',nonreportable:'Non-Reportable'};
+const CAT_COLORS={noncommercial:'#e74c3c',commercial:'#27ae60',index_traders:'#3498db',nonreportable:'#95a5a6'};
+const COLORS=['#FF0000','#00CC00','#0000FF','#FF8C00','#9400D3','#00CED1','#FF1493','#32CD32','#FF6347','#4169E1','#DAA520','#008B8B','#8B0000'];
+let charts={},currentData=null,allTraderData=null,availableCommodities=[],summaryData=[],selectedYears=new Set(),selectedSeasonComms=new Set(),seasonCache={};
+document.addEventListener('DOMContentLoaded',async()=>{document.getElementById('endDate').valueAsDate=new Date();await loadCommodityList();});
+function showL(s,t=''){document.getElementById('loading').style.display=s?'block':'none';if(t)document.getElementById('loadingText').textContent=t;document.querySelectorAll('button').forEach(b=>b.disabled=s);}
+function showE(m){const e=document.getElementById('error');e.textContent=m;e.style.display='block';setTimeout(()=>e.style.display='none',10000);}
+function hideE(){document.getElementById('error').style.display='none';}
+function getWeekNumber(date){const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const dn=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-dn);const ys=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil((((d-ys)/86400000)+1)/7);}
+function pctile(vals,cur){const s=[...vals].sort((a,b)=>a-b);const idx=s.indexOf(cur);return s.length>1?(idx/(s.length-1))*100:50;}
+async function loadCommodityList(){const sel=document.getElementById('commoditySelect');sel.disabled=true;try{const c=new AbortController();setTimeout(()=>c.abort(),10000);const res=await fetch(`${API_ENDPOINT}?$limit=5000&$order=report_date_as_yyyy_mm_dd DESC`,{signal:c.signal});if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();availableCommodities=[...new Set(data.map(d=>d.market_and_exchange_names))].filter(Boolean).sort();if(!availableCommodities.length)throw new Error('No data');populateDropdown(availableCommodities);}catch(e){availableCommodities=ALL_13.slice();populateDropdown(availableCommodities);}finally{sel.disabled=false;buildCommoditySelector();}}
+function populateDropdown(comms){const sel=document.getElementById('commoditySelect');sel.innerHTML='<option value="">-- Select Commodity --</option>';const sectors={Grains:['WHEAT','CORN','SOYBEAN'],Softs:['COTTON','COCOA','SUGAR','COFFEE'],Livestock:['HOGS','CATTLE']};const grouped={},other=[];comms.forEach(c=>{const u=c.toUpperCase();let found=false;for(const[sector,kws]of Object.entries(sectors)){if(kws.some(k=>u.includes(k))){if(!grouped[sector])grouped[sector]=[];grouped[sector].push(c);found=true;break;}}if(!found)other.push(c);});Object.entries(grouped).forEach(([sector,items])=>{if(!items.length)return;const og=document.createElement('optgroup');og.label=sector;items.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c.split(' - ')[0];og.appendChild(o);});sel.appendChild(og);});if(other.length){const og=document.createElement('optgroup');og.label='Other';other.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c.split(' - ')[0];og.appendChild(o);});sel.appendChild(og);}}
+function getSelectedCommodity(){return document.getElementById('commoditySelect').value||document.getElementById('manualCommodity').value.trim();}
+async function fetchData(){const commodity=getSelectedCommodity();const tc=document.getElementById('traderCategory').value;const sd=document.getElementById('startDate').value;const ed=document.getElementById('endDate').value;if(!commodity){showE('Select a commodity');return;}showL(true,'Fetching data...');hideE();try{const q=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '${sd}' AND report_date_as_yyyy_mm_dd <= '${ed}'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;const res=await fetch(`${API_ENDPOINT}?${q}`);if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();if(!data.length)throw new Error('No data found');currentData=processData(data,tc);if(!currentData)throw new Error('Field mapping failed');allTraderData={noncommercial:processData(data,'noncommercial'),commercial:processData(data,'commercial'),index_traders:processData(data,'index_traders'),nonreportable:processData(data,'nonreportable')};seasonCache[commodity]=processData(data,tc);populateYearSelector();showAllSections();updateAllCharts();updateWeeklyDetail(data);}catch(e){showE('Error: '+e.message);}finally{showL(false);}}
+function processData(rawData,category){if(!rawData||!rawData.length)return null;rawData.sort((a,b)=>new Date(a.report_date_as_yyyy_mm_dd)-new Date(b.report_date_as_yyyy_mm_dd));const first=rawData[0];const fm=TRADER_FIELDS[category];const det={long:findField(first,fm.long),short:findField(first,fm.short),spread:findField(first,fm.spread),tradersLong:findField(first,fm.traders_long),tradersShort:findField(first,fm.traders_short)};if(!det.long||!det.short)return null;const safe=v=>(v==null||v==='')?0:(parseInt(v)||0);const p={dates:rawData.map(d=>d.report_date_as_yyyy_mm_dd),long:rawData.map(d=>safe(d[det.long])),short:rawData.map(d=>safe(d[det.short])),spread:det.spread?rawData.map(d=>safe(d[det.spread])):new Array(rawData.length).fill(0),tradersLong:det.tradersLong?rawData.map(d=>safe(d[det.tradersLong])):new Array(rawData.length).fill(0),tradersShort:det.tradersShort?rawData.map(d=>safe(d[det.tradersShort])):new Array(rawData.length).fill(0),oi:rawData.map(d=>safe(d.open_interest_all)),commodity:first.market_and_exchange_names,category};p.net=p.long.map((l,i)=>l-p.short[i]);p.tradersTotal=p.tradersLong.map((l,i)=>l+p.tradersShort[i]);p.longPct=p.oi.map((oi,i)=>oi>0?p.long[i]/oi*100:0);p.shortPct=p.oi.map((oi,i)=>oi>0?p.short[i]/oi*100:0);p.netPct=p.longPct.map((l,i)=>l-p.shortPct[i]);return p;}
+function findField(record,patterns){if(!patterns||!patterns.length)return null;for(let p of patterns)if(record.hasOwnProperty(p))return p;const keys=Object.keys(record);for(let p of patterns){const m=keys.find(k=>k.toLowerCase()===p.toLowerCase());if(m)return m;}return null;}
+function showAllSections(){['chart1','chart2','chart3','chart4','weeklyDetail'].forEach(id=>document.getElementById(id).style.display='block');}
+function showSeasonalitySection(){document.getElementById('chart4').style.display='block';document.getElementById('chart4').scrollIntoView({behavior:'smooth'});if(selectedYears.size===0){const now=new Date().getFullYear();selectedYears=new Set([now-2,now-1,now]);buildYearSelectorStandalone();}updateSeasonalityChart();}
+function updateWeeklyDetail(rawData){if(!allTraderData||!currentData)return;const commodity=currentData.commodity||'';document.getElementById('weeklyDetailTitle').textContent='📋 '+commodity.split(' - ')[0]+' — 4-Week Positioning Detail';const cats=['noncommercial','commercial','index_traders','nonreportable'];const ref=allTraderData.noncommercial||allTraderData.commercial;if(!ref)return;const n=ref.dates.length;const tb=document.getElementById('weeklyDetailBody');tb.innerHTML='';const weeks=Math.min(4,n);for(let w=0;w<weeks;w++){const idx=n-1-w;const tr=document.createElement('tr');if(w===0)tr.style.background='#f0f7ff';const date=ref.dates[idx].split('T')[0];let html=`<td>${date}</td>`;for(const cat of cats){const d=allTraderData[cat];if(!d||idx>=d.long.length){html+='<td>-</td><td>-</td><td>-</td>';continue;}const lng=d.long[idx]||0,sht=d.short[idx]||0,net=lng-sht;html+=`<td>${lng.toLocaleString()}</td><td>${sht.toLocaleString()}</td><td class="${net>=0?'val-pos':'val-neg'}">${net.toLocaleString()}</td>`;}const oi=(ref.oi&&ref.oi[idx])?ref.oi[idx]:0;html+=`<td>${oi.toLocaleString()}</td>`;tr.innerHTML=html;tb.appendChild(tr);if(w===0&&n>1){const pi=n-2;const cr=document.createElement('tr');cr.className='chg-row';let ch=`<td style="color:#666;font-style:italic">Wk Chg</td>`;for(const cat of cats){const d=allTraderData[cat];if(!d||pi>=d.long.length){ch+='<td>-</td><td>-</td><td>-</td>';continue;}const dl=(d.long[idx]||0)-(d.long[pi]||0),ds=(d.short[idx]||0)-(d.short[pi]||0),dn=dl-ds;const fc=v=>`<td class="${v>0?'val-pos':v<0?'val-neg':''}">${v>0?'+':''}${v.toLocaleString()}</td>`;ch+=fc(dl)+fc(ds)+fc(dn);}const doiChg=oi-(ref.oi&&ref.oi[pi]?ref.oi[pi]:0);ch+=`<td class="${doiChg>0?'val-pos':doiChg<0?'val-neg':''}">${doiChg>0?'+':''}${doiChg.toLocaleString()}</td>`;cr.innerHTML=ch;tb.appendChild(cr);}}const nc=allTraderData.noncommercial;if(nc){const last=n-1,prev=Math.max(0,n-2);const ncNet=nc.net[last],ncNetChg=ncNet-nc.net[prev];const ncNP=pctile(nc.net,ncNet);document.getElementById('weeklyDetailSummary').innerHTML=`<strong>Week of ${nc.dates[last].split('T')[0]}:</strong> Non-Commercial net is <strong style="color:${ncNet>=0?'#27ae60':'#e74c3c'}">${ncNet.toLocaleString()}</strong> contracts (${ncNetChg>=0?'+':''}${ncNetChg.toLocaleString()} w/w), at the <strong>${ncNP.toFixed(0)}th percentile</strong>. Total OI: ${(ref.oi[last]||0).toLocaleString()}.`;}}
+function updateAllCharts(){updatePositionChart();updateTraderChart();updateCompareChart();updateSeasonalityChart();}
+function updatePositionChart(){if(!currentData)return;const m=document.getElementById('positionMetric').value;const ctx=document.getElementById('positionChart').getContext('2d');if(charts.position)charts.position.destroy();let v,l,c,ip=false,sz=false;switch(m){case'net':v=currentData.net;l='Net';c='#0f3460';sz=true;break;case'long':v=currentData.long;l='Long';c='#27ae60';break;case'short':v=currentData.short;l='Short';c='#e74c3c';break;case'spread':v=currentData.spread;l='Spreading';c='#f39c12';break;case'net_pct':v=currentData.netPct;l='Net % OI';c='#0f3460';ip=true;sz=true;break;}const ds=[{label:l,data:currentData.dates.map((d,i)=>({x:d,y:v[i]})),borderColor:c,backgroundColor:c+'20',borderWidth:2,fill:true,tension:.4,pointRadius:0,pointHoverRadius:6}];if(sz)ds.push({label:'Zero',data:currentData.dates.map(d=>({x:d,y:0})),borderColor:'rgba(231,76,60,.3)',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false});charts.position=new Chart(ctx,{type:'line',data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},scales:{x:{type:'time',time:{unit:'month',displayFormats:{month:'MMM yyyy'}}},y:{title:{display:true,text:ip?'% of OI':'Contracts'}}}}});}
+function updateTraderChart(){if(!currentData)return;const m=document.getElementById('traderMetric').value;const ctx=document.getElementById('traderChart').getContext('2d');if(charts.trader)charts.trader.destroy();let ds=[];switch(m){case'total':ds=[{label:'Total',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersTotal[i]})),borderColor:'#0f3460',fill:true}];break;case'long':ds=[{label:'Long',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersLong[i]})),borderColor:'#27ae60',fill:true}];break;case'short':ds=[{label:'Short',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersShort[i]})),borderColor:'#e74c3c',fill:true}];break;case'both':ds=[{label:'Long',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersLong[i]})),borderColor:'#27ae60',fill:false},{label:'Short',data:currentData.dates.map((d,i)=>({x:d,y:currentData.tradersShort[i]})),borderColor:'#e74c3c',fill:false}];break;}charts.trader=new Chart(ctx,{type:'line',data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:m==='both'}},scales:{x:{type:'time',time:{unit:'month'}},y:{title:{display:true,text:'Traders'}}}}});}
+function updateCompareChart(){if(!allTraderData)return;const m=document.getElementById('compareMetric').value;const ctx=document.getElementById('compareChart').getContext('2d');if(charts.compare)charts.compare.destroy();const ds=Object.entries(allTraderData).filter(([,d])=>d!==null).map(([key,data])=>{let vals=m==='net'?data.net:m==='long'?data.long:m==='short'?data.short:data.netPct;return{label:CAT_LABELS[key],data:data.dates.map((d,i)=>({x:d,y:vals[i]})),borderColor:CAT_COLORS[key],borderWidth:2,fill:false,pointRadius:0};});charts.compare=new Chart(ctx,{type:'line',data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{type:'time',time:{unit:'month'}},y:{title:{display:true,text:m.includes('pct')?'% of OI':'Contracts'}}}}});}
+function buildCommoditySelector(){const container=document.getElementById('commoditySelector');while(container.children.length>2)container.removeChild(container.lastChild);const comms=availableCommodities.length>0?availableCommodities:ALL_13;const ba=document.createElement('button');ba.type='button';ba.className='chip-all commodity-chip';ba.textContent='ALL';ba.style.cssText='margin-top:0;min-width:auto;';ba.onclick=()=>{selectedSeasonComms=new Set(comms);refreshChipStyles();updateSeasonalityChart();};container.appendChild(ba);const bn=document.createElement('button');bn.type='button';bn.className='chip-none commodity-chip';bn.textContent='NONE';bn.style.cssText='margin-top:0;min-width:auto;';bn.onclick=()=>{selectedSeasonComms=new Set([comms[0]]);refreshChipStyles();updateSeasonalityChart();};container.appendChild(bn);if(selectedSeasonComms.size===0){const cur=currentData?currentData.commodity:null;const defs=cur?[cur]:[];for(let i=0;i<comms.length&&defs.length<4;i++)if(!defs.includes(comms[i]))defs.push(comms[i]);selectedSeasonComms=new Set(defs);}comms.forEach(commodity=>{const chip=document.createElement('span');chip.className='commodity-chip';chip.dataset.commodity=commodity;chip.textContent=commodity.split(' - ')[0];chip.title=commodity;chip.onclick=()=>{if(selectedSeasonComms.has(commodity)){if(selectedSeasonComms.size>1)selectedSeasonComms.delete(commodity);}else selectedSeasonComms.add(commodity);refreshChipStyles();updateSeasonalityChart();};container.appendChild(chip);});refreshChipStyles();}
+function refreshChipStyles(){const container=document.getElementById('commoditySelector');Array.from(container.querySelectorAll('[data-commodity]')).forEach(chip=>chip.classList.toggle('active',selectedSeasonComms.has(chip.dataset.commodity)));document.getElementById('selectionCount').textContent=`(${selectedSeasonComms.size} of ${(availableCommodities.length||ALL_13.length)} selected)`;}
+function populateYearSelector(){if(!currentData)return;const years=[...new Set(currentData.dates.map(d=>new Date(d).getFullYear()))].sort();const container=document.getElementById('yearSelector');container.innerHTML='<strong style="width:100%">Select Years:</strong>';selectedYears=new Set(years.slice(-3));years.forEach(year=>{const chip=document.createElement('div');chip.className='year-chip'+(selectedYears.has(year)?' active':'');chip.textContent=year;chip.onclick=()=>{if(selectedYears.has(year)&&selectedYears.size>1){selectedYears.delete(year);chip.classList.remove('active');}else if(!selectedYears.has(year)){selectedYears.add(year);chip.classList.add('active');}updateSeasonalityChart();};container.appendChild(chip);});}
+function buildYearSelectorStandalone(){const container=document.getElementById('yearSelector');container.innerHTML='<strong style="width:100%">Select Years:</strong>';const now=new Date().getFullYear(),years=[now-4,now-3,now-2,now-1,now];years.forEach(year=>{const chip=document.createElement('div');chip.className='year-chip'+(selectedYears.has(year)?' active':'');chip.textContent=year;chip.onclick=()=>{if(selectedYears.has(year)&&selectedYears.size>1){selectedYears.delete(year);chip.classList.remove('active');}else if(!selectedYears.has(year)){selectedYears.add(year);chip.classList.add('active');}updateSeasonalityChart();};container.appendChild(chip);});}
+async function updateSeasonalityChart(){const metric=document.getElementById('seasonalityMetric').value;const agg=document.getElementById('seasonalityAgg').value;const ctx=document.getElementById('seasonalityChart').getContext('2d');if(charts.seasonality)charts.seasonality.destroy();const commoditiesArray=Array.from(selectedSeasonComms);if(!commoditiesArray.length)return;if(!document.querySelector('#yearSelector .year-chip'))buildYearSelectorStandalone();if(selectedYears.size===0)return;const tc=document.getElementById('traderCategory').value;for(const commodity of commoditiesArray){if(!seasonCache[commodity]){try{const q=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '2019-01-01'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;const res=await fetch(`${API_ENDPOINT}?${q}`);const data=await res.json();if(data.length>0)seasonCache[commodity]=processData(data,tc);}catch(e){console.warn(e);}}}const yearData={};for(const commodity of commoditiesArray){const proc=seasonCache[commodity];if(!proc)continue;proc.dates.forEach((dateStr,idx)=>{const year=new Date(dateStr).getFullYear();if(!selectedYears.has(year))return;const week=getWeekNumber(new Date(dateStr));if(!yearData[year])yearData[year]={};if(!yearData[year][week])yearData[year][week]={sum:0,count:0};let val=0;if(metric==='net')val=proc.net[idx];else if(metric==='long')val=proc.long[idx];else if(metric==='short')val=proc.short[idx];else if(metric==='traders_total')val=proc.tradersTotal[idx];yearData[year][week].sum+=val;yearData[year][week].count+=1;});}const yearColors=['#e74c3c','#e67e22','#f39c12','#27ae60','#2980b9','#8e44ad','#16a085','#d35400'];const datasets=[];[...selectedYears].sort().forEach((year,idx)=>{if(!yearData[year])return;const weeklyData=new Array(53).fill(null);for(let w=1;w<=53;w++){const e=yearData[year][w];if(!e||e.count===0)continue;weeklyData[w-1]=agg==='sum'?e.sum:(e.sum/e.count);}const color=yearColors[idx%yearColors.length];datasets.push({label:String(year),data:weeklyData,borderColor:color,borderWidth:2.5,pointRadius:3,pointHoverRadius:6,spanGaps:true,fill:false,tension:.3});});const commLabel=commoditiesArray.length===1?commoditiesArray[0].split(' - ')[0]:commoditiesArray.length+' commodities';const metricLabels={net:'Net Position',long:'Long Positions',short:'Short Positions',traders_total:'Total Traders'};document.getElementById('seasonalityNote').innerHTML=`<strong>Showing:</strong> ${commLabel} | <strong>Metric:</strong> ${metricLabels[metric]} | <strong>Agg:</strong> ${agg}`;charts.seasonality=new Chart(ctx,{type:'line',data:{labels:Array.from({length:53},(_,i)=>'W'+(i+1)),datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{title:{display:true,text:`${commLabel} — Weekly ${metricLabels[metric]}`,font:{size:13,weight:'bold'}},legend:{position:'top',labels:{boxWidth:14,font:{size:11}}}},scales:{x:{title:{display:true,text:'Week of Year'},ticks:{callback:(v,i)=>i%4===0?'W'+(i+1):''}},y:{title:{display:true,text:metricLabels[metric]}}}}});}
+async function generateSummary(){showL(true,'Generating summary...');document.getElementById('summarySection').style.display='block';summaryData=[];const comms=availableCommodities.length>0?availableCommodities:ALL_13;for(let i=0;i<comms.length;i++){const commodity=comms[i];for(const cat of['noncommercial','commercial','index_traders','nonreportable']){document.getElementById('loadingText').textContent=`Loading ${i+1}/${comms.length}: ${commodity.split(' - ')[0]}...`;try{const q=`$where=market_and_exchange_names='${encodeURIComponent(commodity)}' AND report_date_as_yyyy_mm_dd >= '2020-01-01'&$order=report_date_as_yyyy_mm_dd ASC&$limit=10000`;const res=await fetch(`${API_ENDPOINT}?${q}`);const data=await res.json();if(!data.length)continue;const p=processData(data,cat);if(!p)continue;const last=p.net.length-1;summaryData.push({commodity:commodity.split(' - ')[0],category:CAT_LABELS[cat],catKey:cat,net:p.net[last],netMin:Math.min(...p.net),netMax:Math.max(...p.net),long:p.long[last],longMin:Math.min(...p.long),longMax:Math.max(...p.long),short:p.short[last],shortMin:Math.min(...p.short),shortMax:Math.max(...p.short),netPct:p.netPct[last],netPctMin:Math.min(...p.netPct),netPctMax:Math.max(...p.netPct)});}catch(e){}}}renderSummaryTable();showL(false);}
+function renderSummaryTable(){const tbody=document.getElementById('summaryTableBody');tbody.innerHTML='';if(!summaryData.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;">No data</td></tr>';return;}summaryData.sort((a,b)=>a.commodity.localeCompare(b.commodity));let current='';summaryData.forEach(item=>{const show=item.commodity!==current;current=item.commodity;const row=document.createElement('tr');row.innerHTML=`<td class="commodity-name">${show?item.commodity:''}</td><td style="font-weight:600;color:${CAT_COLORS[item.catKey]||'#333'}">${item.category}</td>`+minMaxBar(item.net,item.netMin,item.netMax,true)+`<td class="${item.net>0?'positive-value':'negative-value'}">${item.net.toLocaleString()}</td>`+minMaxBar(item.long,item.longMin,item.longMax,false)+`<td class="positive-value">${item.long.toLocaleString()}</td>`+minMaxBar(item.short,item.shortMin,item.shortMax,false)+`<td class="negative-value">${item.short.toLocaleString()}</td>`+minMaxBar(item.netPct,item.netPctMin,item.netPctMax,true)+`<td class="${item.netPct>0?'positive-value':'negative-value'}">${item.netPct.toFixed(1)}%</td>`;tbody.appendChild(row);});}
+function minMaxBar(current,min,max,isNet){if(min===max)return'<td><div class="minmax-bar-container"><div class="minmax-bar-bg"></div></div></td>';const p=((current-min)/(max-min))*100;const color=isNet?(current>=0?'#27ae60':'#e74c3c'):'#2c3e50';const f=n=>Math.abs(n)>=1000?(n/1000).toFixed(1)+'k':n.toLocaleString();return`<td class="minmax-cell"><div class="minmax-bar-container"><div class="minmax-bar-bg"></div><div class="minmax-current" style="left:${Math.max(5,Math.min(95,p))}%;background:${color};"></div></div><div class="minmax-labels"><span>${f(min)}</span><span>${f(max)}</span></div></td>`;}
+function refreshSummary(){generateSummary();}
+function downloadCSV(){if(!currentData){showE('No data');return;}let csv='Date,Long,Short,Net,Spread,OI\n';for(let i=0;i<currentData.dates.length;i++)csv+=`${currentData.dates[i]},${currentData.long[i]},${currentData.short[i]},${currentData.net[i]},${currentData.spread[i]},${currentData.oi[i]}\n`;const b=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`CFTC_CIT_${new Date().toISOString().split('T')[0]}.csv`;a.click();}
+</script>
+</body>
+</html>

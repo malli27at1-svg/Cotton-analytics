@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>USDA PSD — Global Balance Sheet Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;600&display=swap');
+:root{--bg:#080b0f;--s1:#0e1218;--s2:#141923;--s3:#1a2130;--border:#1e2530;--border2:#253040;--gold:#e8c547;--blue:#4fc3f7;--green:#6fcf97;--red:#eb5757;--purple:#bb86fc;--orange:#ffb347;--teal:#38d9d9;--text:#dde4f0;--muted:#5a6882;--muted2:#3d4a60}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{background:var(--s1);border-bottom:1px solid var(--border);padding:18px 32px;display:flex;justify-content:space-between;align-items:flex-end;position:sticky;top:0;z-index:100}
+.eyebrow{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:2.1rem;letter-spacing:4px;background:linear-gradient(120deg,var(--blue),var(--purple) 40%,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.live-badge{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--muted2)}
+.live-dot.on{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.controls{background:var(--s2);border-bottom:1px solid var(--border);padding:12px 32px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.ctrl{display:flex;flex-direction:column;gap:4px}
+.ctrl label{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+select{background:var(--s1);border:1px solid var(--border);color:var(--text);padding:7px 26px 7px 10px;font-family:'DM Mono',monospace;font-size:.72rem;border-radius:3px;cursor:pointer;outline:none;transition:border-color .15s;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6882'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+select[multiple]{padding:5px 10px;background-image:none;min-height:88px}
+select[multiple] option{padding:3px 6px;background:var(--s1);color:var(--text)}
+select[multiple] option:checked{background:rgba(79,195,247,.18);color:var(--blue)}
+select:hover,select:focus{border-color:var(--blue)}
+.btn{background:var(--blue);color:#000;border:none;padding:9px 22px;font-family:'DM Mono',monospace;font-size:.72rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:hover{background:#7ae0ff;transform:translateY(-1px)}
+.btn:disabled{background:var(--muted2);color:var(--muted);cursor:not-allowed;transform:none}
+.btn-ghost{background:var(--s2);color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);background:var(--s3)}
+.status{padding:6px 32px;font-family:'DM Mono',monospace;font-size:.63rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);min-height:30px;color:var(--muted)}
+.status.loading{color:var(--gold)}.status.ok{color:var(--green)}.status.err{color:var(--red)}
+.prog-bar{height:2px;background:var(--border)}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));transition:width .4s;width:0}
+.debug-box{margin:0 32px;background:#080c12;border:1px solid var(--border);border-top:none;padding:8px 14px;font-family:'DM Mono',monospace;font-size:.62rem;color:#607590;line-height:1.65;display:none;max-height:200px;overflow-y:auto}
+.debug-box.show{display:block}
+.main{padding:20px 32px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.card-head{padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--border)}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px}
+.card-sub{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:3px;line-height:1.5}
+.chip{font-family:'DM Mono',monospace;font-size:.54rem;padding:3px 9px;border-radius:2px;border:1px solid var(--border);color:var(--muted);background:var(--s2);white-space:nowrap}
+.chip.gold{color:var(--gold);border-color:rgba(232,197,71,.3);background:rgba(232,197,71,.06)}
+.chip.blue{color:var(--blue);border-color:rgba(79,195,247,.3);background:rgba(79,195,247,.06)}
+.chip.purple{color:var(--purple);border-color:rgba(187,134,252,.3);background:rgba(187,134,252,.06)}
+.chip.orange{color:var(--orange);border-color:rgba(255,179,71,.3);background:rgba(255,179,71,.06)}
+.chip.teal{color:var(--teal);border-color:rgba(56,217,217,.3);background:rgba(56,217,217,.06)}
+.kpi-strip{display:flex;overflow-x:auto}
+.kpi-cell{flex:1 0 155px;padding:14px 16px;border-right:1px solid var(--border);position:relative}
+.kpi-cell:last-child{border-right:none}
+.kpi-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-cell.kpi-pos::before{background:linear-gradient(90deg,var(--green),transparent)}
+.kpi-cell.kpi-neg::before{background:linear-gradient(90deg,var(--red),transparent)}
+.kpi-cell.kpi-neu::before{background:linear-gradient(90deg,var(--blue),transparent)}
+.kpi-label{font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-val{font-family:'DM Mono',monospace;font-size:1.12rem;font-weight:500;line-height:1.1}
+.kpi-unit{font-family:'DM Mono',monospace;font-size:.49rem;color:var(--muted2);margin-top:3px}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-family:'DM Mono',monospace;font-size:.54rem;padding:2px 7px;border-radius:2px;margin-top:6px}
+.kpi-delta.pos{color:var(--green);background:rgba(111,207,151,.1);border:1px solid rgba(111,207,151,.2)}
+.kpi-delta.neg{color:var(--red);background:rgba(235,87,87,.1);border:1px solid rgba(235,87,87,.2)}
+.kpi-delta.neu{color:var(--muted);background:rgba(90,104,130,.1);border:1px solid rgba(90,104,130,.2)}
+.intel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px}
+@media(max-width:1100px){.intel-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.intel-grid{grid-template-columns:1fr}}
+.intel-card{background:var(--s2);border:1px solid var(--border);border-radius:3px;padding:12px 14px;position:relative;overflow:hidden}
+.intel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.intel-card.bullish::before{background:linear-gradient(90deg,var(--green),transparent)}
+.intel-card.bearish::before{background:linear-gradient(90deg,var(--red),transparent)}
+.intel-card.neutral::before{background:linear-gradient(90deg,var(--blue),transparent)}
+.intel-card.warning::before{background:linear-gradient(90deg,var(--orange),transparent)}
+.intel-badge{display:inline-flex;align-items:center;gap:4px;font-family:'DM Mono',monospace;font-size:.48rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.intel-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.trader-summary{padding:8px 14px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;overflow:hidden}
+.ts-loading{padding:20px;color:var(--muted);font-size:.75rem}
+.ts-lines{display:flex;flex-direction:column;gap:7px;flex-shrink:0}
+.ts-line{font-size:.76rem;line-height:1.65;color:var(--text);padding-left:11px;border-left:3px solid var(--border)}
+.ts-l1{border-left-color:#4a9eff}.ts-l2{border-left-color:#f0b429}.ts-l3{border-left-color:#6fcf97}.ts-l4{border-left-color:#eb5757;font-style:italic;color:var(--muted)}
+.ct-table-section{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.ct-toolbar{display:flex;align-items:center;gap:8px;padding:4px 0 5px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.ct-toolbar-lbl{font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:.5px;flex:1}
+.ct-toolbar-hint{font-family:'DM Mono',monospace;font-size:.48rem;color:var(--muted2)}
+.ct-dd{font-family:'DM Mono',monospace;font-size:.5rem;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:2px 5px;border-radius:2px;max-width:160px}
+.ct-tbl-outer{overflow:auto;flex:1;min-height:0}
+.ct-tbl{width:100%;border-collapse:collapse;white-space:nowrap;table-layout:auto}
+.ct-tbl thead th{background:var(--s3);color:var(--muted);font-family:'DM Mono',monospace;font-size:.43rem;padding:2px 3px;text-align:right;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+.ct-tbl th.ct-attr{text-align:left;white-space:nowrap;min-width:110px}
+.ct-tbl th.ct-cc{text-align:center;border-left:1px solid var(--border);font-size:.43rem;white-space:nowrap;padding:2px 4px}
+.ct-cc-nm{margin-right:2px}
+.ct-tbl th.ct-yr{font-size:.4rem;padding:1px 2px}
+.ct-tbl th.muted{color:var(--muted2)}
+.ct-rm{cursor:pointer;color:var(--muted2);margin-left:4px;font-size:.55rem;display:inline-flex;align-items:center;justify-content:center;width:11px;height:11px;border-radius:2px;border:1px solid transparent;line-height:1;vertical-align:middle}
+.ct-rm:hover{color:#fff;background:var(--red);border-color:var(--red)}
+.ct-tbl td{padding:1.5px 3px;font-family:'DM Mono',monospace;font-size:.5rem;text-align:right;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap}
+.ct-tbl td.ct-attr-nm{text-align:left;color:var(--text);font-family:inherit;font-size:.52rem;font-weight:500;white-space:nowrap}
+.ct-unit{color:var(--muted2);font-size:.41rem;font-weight:400}
+.ct-tbl td.muted{color:var(--muted2)}.ct-tbl td.dp{color:var(--green)}.ct-tbl td.dn{color:var(--red)}
+.ct-tbl tr:hover td{background:rgba(255,255,255,.03)}
+.tbl-outer{overflow-x:auto;overflow-y:auto;max-height:580px}
+table{width:100%;border-collapse:collapse;white-space:nowrap}
+thead{position:sticky;top:0;z-index:10}
+thead tr.grp th{background:var(--bg);font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);text-align:center;padding:5px 10px;border-bottom:1px solid var(--border2);border-right:1px solid var(--border)}
+thead tr.grp th:first-child{text-align:left}
+thead tr.hdr th{background:var(--s2);font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 10px;border-bottom:2px solid var(--border2);border-right:1px solid var(--border)}
+thead tr.hdr th:first-child{text-align:left;min-width:200px}
+th.lc{background:rgba(232,197,71,.07)!important;color:var(--gold)!important}
+td{padding:6px 10px;border-bottom:1px solid rgba(30,37,48,.5);font-family:'DM Mono',monospace;font-size:.68rem;text-align:right;color:var(--text);border-right:1px solid rgba(30,37,48,.2)}
+td:first-child{text-align:left}
+tr:hover td{background:rgba(20,25,35,.5)}
+td.lv{background:rgba(232,197,71,.04);font-weight:500}
+td.dp{color:var(--green);font-size:.61rem;background:rgba(111,207,151,.04)}
+td.dn{color:var(--red);font-size:.61rem;background:rgba(235,87,87,.04)}
+td.dz{color:var(--muted2);font-size:.61rem}
+tr.sep td{background:rgba(14,18,24,.8);font-family:'DM Mono',monospace;font-size:.49rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);padding:4px 10px;border-bottom:1px solid var(--border)}
+tr.wrow td{color:var(--gold)}
+.ul{font-size:.5rem;color:var(--muted2)}
+.proj-layout{display:grid;grid-template-columns:1fr 1fr;gap:0}
+@media(max-width:860px){.proj-layout{grid-template-columns:1fr}}
+.pp{padding:14px 18px;border-right:1px solid var(--border)}.pp:last-child{border-right:none}
+.pp-title{font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.mr{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,37,48,.4);gap:8px}.mr:last-child{border-bottom:none}
+.mrl{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mn{font-family:'DM Mono',monospace;font-size:.63rem;color:var(--text);display:flex;align-items:center;gap:5px}
+.mdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.mm{font-family:'DM Mono',monospace;font-size:.51rem;color:var(--muted)}
+.mv{font-family:'DM Mono',monospace;font-size:.76rem;text-align:right;white-space:nowrap;flex-shrink:0}
+.cblock{background:rgba(232,197,71,.05);border:1px solid rgba(232,197,71,.2);border-radius:3px;padding:10px 12px;margin-top:8px}
+.cblock .mn{color:var(--gold);font-size:.68rem;font-weight:600}.cblock .mv{color:var(--gold);font-size:.92rem}
+.star{color:var(--gold)}
+.btwrap{overflow-x:auto}
+.btt{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;white-space:nowrap}
+.btt th{font-size:.5rem;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);padding:5px 8px;text-align:right;border-bottom:1px solid var(--border2);background:var(--bg)}
+.btt th:first-child{text-align:left}
+.btt td{font-size:.58rem;padding:5px 8px;text-align:right;border-bottom:1px solid rgba(30,37,48,.4)}
+.btt td:first-child{text-align:left;color:var(--muted);font-size:.56rem}
+.btt tr.mrow td{background:rgba(20,25,35,.6);font-weight:500;color:var(--muted)}.btt tr.mrow td:first-child{color:var(--gold)}
+.ag{color:var(--green)}.ao{color:var(--orange)}.ab{color:var(--red)}
+.ctrl-row{padding:9px 18px;background:var(--s2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ctrl-row label{font-family:'DM Mono',monospace;font-size:.54rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.ctrl-row select{padding:5px 22px 5px 8px;font-size:.68rem}
+.mom-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--border)}
+@media(max-width:720px){.mom-grid{grid-template-columns:1fr}}
+.mom-panel{padding:14px 18px;border-right:1px solid var(--border)}.mom-panel:last-child{border-right:none}
+.mom-title{font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.mom-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(30,37,48,.3);font-family:'DM Mono',monospace;font-size:.62rem}.mom-row:last-child{border-bottom:none}
+.mom-attr{color:var(--muted);font-size:.57rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mom-cur{color:var(--text);text-align:right}.mom-prev{color:var(--muted2);font-size:.57rem;text-align:right}
+.mom-chg{font-size:.57rem;text-align:right;white-space:nowrap}
+.chg-up{color:var(--green)}.chg-dn{color:var(--red)}.chg-na{color:var(--muted2)}
+footer{padding:12px 32px;border-top:1px solid var(--border);font-family:'DM Mono',monospace;font-size:.59rem;color:var(--muted);display:flex;justify-content:space-between;background:var(--s1);margin-top:8px}
+@media(max-width:900px){header,.controls,.main,.status{padding-left:14px;padding-right:14px}}
+.print-page{display:block;margin:0 auto 20px;box-shadow:0 4px 24px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.06);overflow:hidden}
+
+/* ── Missing chart grid styles ── */
+.mini-chart-block{background:var(--s2);border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.mini-chart-title{font-family:'DM Mono',monospace;font-size:.56rem;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--s3);color:var(--muted)}
+.mini-chart-wrap{padding:6px;height:160px;position:relative}
+.mini-chart-wrap canvas{width:100%!important;height:100%!important}
+.card-footnote{padding:6px 18px 10px;font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted2);border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="eyebrow">USDA FAS · Production, Supply &amp; Distribution · Open Data API</div>
+    <h1>PSD Macro Analytics</h1>
+  </div>
+  <div class="live-badge"><div class="live-dot" id="liveDot"></div><span id="liveLabel">Offline</span></div>
+</header>
+<div class="controls">
+  <div class="ctrl" style="min-width:260px"><label>Commodity</label><select id="selComm" disabled style="min-width:260px"><option>Loading…</option></select></div>
+  <div class="ctrl"><label>Countries &amp; World (Ctrl+click)</label><select id="selCountries" multiple style="min-width:240px;min-height:88px"></select></div>
+  <div class="ctrl"><label>Lookback Years</label><select id="selYears"><option value="10">10 Years</option><option value="15" selected>15 Years</option><option value="20">20 Years</option><option value="30">30 Years</option></select></div>
+  <div class="ctrl" style="align-self:flex-end"><button class="btn" id="btnLoad" onclick="fetchData()" disabled>&#x27F3; Load Data</button></div>
+  <div class="ctrl" style="align-self:flex-end"><button class="btn btn-ghost" onclick="document.getElementById('dbgBox').classList.toggle('show')">Debug</button></div>
+  <div class="ctrl" style="align-self:flex-end"><button class="btn" id="btnPdf" onclick="generatePDF()" disabled style="background:var(--gold);color:#0a0e16;font-weight:700">&#x2399; PDF Report</button></div>
+</div>
+<div class="status loading" id="statusBar">Bootstrapping metadata…</div>
+<div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+<div class="debug-box show" id="dbgBox"></div>
+<div class="main">
+  <div class="card" id="kpiCard" style="display:none!important;visibility:hidden;position:absolute;pointer-events:none"><div class="card-head"><div><div class="card-title" style="display:none">Market Snapshot</div><div class="card-sub" id="kpiSub">—</div></div><span class="chip gold" id="kpiYear">—</span></div><div class="kpi-strip" id="kpiStrip"></div></div>
+  <div class="card" id="intelCard" style="display:none"><div class="card-head"><div><div class="card-title">Market Summary</div><div class="card-sub" id="intelSub">—</div></div><span class="chip gold">LATEST REPORT</span></div><div class="trader-summary" id="traderSummary"><div class="ts-loading">Analysing…</div></div><div class="card-footnote" id="intelFoot">—</div></div>
+  <div class="card" id="histCard" style="display:none"><div class="card-head"><div><div class="card-title">Historical Trends — Part 1</div><div class="card-sub" id="histSub">—</div></div><span class="chip blue" id="histChip">—</span></div><div id="histChartsGrid" style="padding:10px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px"></div></div>
+  <div class="card" id="histCard2" style="display:none"><div class="card-head"><div><div class="card-title">Historical Trends — Part 2</div><div class="card-sub" id="histSub2">—</div></div><span class="chip blue" id="histChip2">—</span></div><div id="histChartsGrid2" style="padding:10px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px"></div></div>
+  <div class="card" id="bsCard" style="display:none"><div class="card-head"><div><div class="card-title">Balance Sheet Matrix — World</div><div class="card-sub" id="bsSub">—</div></div><span class="chip blue" id="bsChip">MATRIX</span></div><div class="tbl-outer" id="bsTbl"></div><div class="card-footnote" id="bsFoot">—</div></div>
+  <div class="card" id="bsUSACard" style="display:none"><div class="card-head"><div><div class="card-title">Balance Sheet Matrix — USA</div><div class="card-sub" id="bsUSASub">—</div></div><span class="chip blue" id="bsUSAChip">USA</span></div><div class="tbl-outer" id="bsUSATbl"></div><div class="card-footnote" id="bsUSAFoot">—</div></div>
+  <div class="card" id="bsCCCard" style="display:none"><div class="card-head"><div><div class="card-title" id="bsCCTitle">Balance Sheet Matrix — Country</div><div class="card-sub" id="bsCCSub">—</div></div><span class="chip blue" id="bsCCChip">—</span></div><div class="tbl-outer" id="bsCCTbl"></div><div class="card-footnote" id="bsCCFoot">—</div></div>
+</div>
+<footer><span>USDA FAS PSD · api.fas.usda.gov/api/psd</span><span id="footTs">Updated monthly on WASDE release day</span></footer>
+<script>
+const API_KEY='p5rJTNhEZbSmIPVyRxEixuZrVfgKraUAhCNo8Kmg';
+const PSD_BASE='https://api.fas.usda.gov/api/psd';
+const PROXY='https://corsproxy.io/?';
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CC=['#e8c547','#4fc3f7','#6fcf97','#bb86fc','#ffb347','#ff6b6b','#38d9d9','#a8e063'];
+const DEF_SEL=['WORLD','US','CH','IN','BR'];
+const MONTH_ATTR_KEYS=['area harvested','yield','production','imports','total supply','total distribution','exports','ending stocks','domestic consumption','loss','stocks-to-use'];
+let attrMap={},countryMap={},unitMap={};
+let aUnit={},aMult={},aIsRatio={};
+let gData={},gCountryRows={},gYears=[];
+let curHistAttr=null,gPrimaryCC='US',gCommCode='';
+let mData={},mDataWorld={};
+let curRelease={},prvRelease={},curRelWorld={},prvRelWorld={};
+let curMonthLbl='Latest',prvMonthLbl='Prior';
+let cHist=null;
+const RATIO_WORDS=['yield','ratio','stocks-to-use','index','per'];
+const PCT_WORDS=['%','percent'];
+function parseUnitString(rawUnit,attrName){if(!rawUnit)return{mult:1,display:''};let s=rawUnit.trim();let mult=1;const pMatch=s.match(/^(1[,\s.]?000|thousands?(\s+of)?)\s+/i);if(pMatch){mult=1000;s=s.slice(pMatch[0].length).trim();}if(/\bHA\b/i.test(s)||/hectare/i.test(s)){mult*=2.47105;s=s.replace(/\bHA\b/gi,'Acres').replace(/Hectares?/gi,'Acres');}return{mult,display:s||rawUnit.trim()||'Units'};}
+function isRatioAttr(attrId){const n=(attrMap[attrId]||'').toLowerCase();return RATIO_WORDS.some(w=>n.includes(w))||PCT_WORDS.some(w=>(aUnit[attrId]||'').includes(w));}
+function fmtMY(y){const yr=parseInt(y);return `MY ${yr}/${(yr+1).toString().slice(-2)}`;}
+function fmt(v,dp=2){if(v==null||isNaN(+v))return'—';const n=+v;if(Math.abs(n)>=1e9)return(n/1e9).toFixed(dp)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(dp)+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';return n.toLocaleString('en-US',{maximumFractionDigits:dp});}
+function fmtD(v){if(v==null||isNaN(+v))return'—';const n=+v,s=n>=0?'+':'-',a=Math.abs(n);if(a>=1e9)return s+(a/1e9).toFixed(2)+'B';if(a>=1e6)return s+(a/1e6).toFixed(2)+'M';if(a>=1e3)return s+(a/1e3).toFixed(1)+'K';return(n>=0?'+':'')+n.toLocaleString('en-US',{maximumFractionDigits:2});}
+function pct(a,b){if(!b||b===0)return null;return((a-b)/Math.abs(b))*100;}
+function fmtPct(v){if(v==null)return'—';return(v>=0?'+':'')+v.toFixed(1)+'%';}
+function dbg(m){const b=document.getElementById('dbgBox');b.innerHTML+=`<div>${m}</div>`;b.scrollTop=b.scrollHeight;}
+function setStatus(c,m){const e=document.getElementById('statusBar');e.className='status '+c;e.textContent=m;}
+function setLive(on){document.getElementById('liveDot').className='live-dot'+(on?' on':'');document.getElementById('liveLabel').textContent=on?'Live':'Offline';}
+function setProg(p){document.getElementById('progFill').style.width=p+'%';}
+function ccName(cc){if(cc==='WORLD')return'World';return countryMap[cc]||cc;}
+function rawVal(yr,cc,aid){const rows=gData[yr];if(!rows)return null;const r=rows.find(x=>x.countryCode===cc&&x.attributeId===aid);return(r&&r.value!=null)?r.value:null;}
+function getV(yr,cc,aid){const v=rawVal(yr,cc,aid);if(v==null)return null;return v*(aMult[aid]||1);}
+function aggV(yr,codes,aid){const n=(attrMap[aid]||'').toLowerCase();if(n.includes('yield')){const pid=findA('production');if(!pid)return null;let sp=0,spy=0;codes.forEach(cc=>{const y=getV(yr,cc,aid);const p=getV(yr,cc,pid);if(y!=null&&p!=null){sp+=p;spy+=p*y;}});return sp>0?spy/sp:null;}if(n.includes('stock')&&n.includes('use')){const eid=findA('ending stocks');const cid=findA('domestic consumption')||findA('total distribution');if(!eid||!cid)return null;let es=0,cs=0;codes.forEach(cc=>{const e=getV(yr,cc,eid);const c=getV(yr,cc,cid);if(e!=null)es+=e;if(c!=null)cs+=c;});return cs>0?(es/cs)*100:null;}let sum=null;codes.forEach(cc=>{const v=getV(yr,cc,aid);if(v!=null)sum=(sum||0)+v;});return sum;}
+function findA(substr){const e=Object.entries(attrMap).find(([,nm])=>nm.toLowerCase().includes(substr.toLowerCase()));return e?parseInt(e[0]):null;}
+function findConsumption(){const patterns=['domestic consumption','total distribution','dom. consumption','domestic use','total use','mill use','consumption','dom. use'];for(const p of patterns){const id=findA(p);if(id!=null)return id;}const e=Object.entries(attrMap).find(([,nm])=>{const n=nm.toLowerCase();return n.includes('use')&&!n.includes('stock')&&!n.includes('yield')&&!n.includes('ratio');});return e?parseInt(e[0]):null;}
+function sortedAttrs(){const ORD=['Beginning Stocks','Area Planted','Area Harvested','Yield','Production','Imports','Total Supply','Feed Dom.','Food Dom.','Industrial Dom.','Domestic Consumption','Other Use','Total Distribution','Exports','Ending Stocks','Loss'];const ids=Object.keys(aUnit).map(Number);return ids.map(id=>({id,name:attrMap[id]||String(id),unit:aUnit[id]||'',mult:aMult[id]||1})).sort((a,b)=>{let ia=ORD.findIndex(x=>a.name.includes(x));let ib=ORD.findIndex(x=>b.name.includes(x));if(ia<0)ia=99;if(ib<0)ib=99;return ia===ib?a.name.localeCompare(b.name):ia-ib;});}
+async function usda(path){const url=`${PSD_BASE}/${path}`;const proxies=[
+  {label:'direct',build:()=>fetch(url,{headers:{'X-Api-Key':API_KEY,'Accept':'application/json'}})},
+  {label:'corsproxy',build:()=>fetch('https://corsproxy.io/?'+encodeURIComponent(url),{headers:{'X-Api-Key':API_KEY,'Accept':'application/json'}})},
+  {label:'allorigins',build:()=>fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url+'?api_key='+API_KEY),{headers:{'Accept':'application/json'}})},
+  {label:'proxy2',build:()=>new Promise((res,rej)=>{setTimeout(()=>fetch('https://corsproxy.io/?'+encodeURIComponent(url),{headers:{'X-Api-Key':API_KEY}}).then(res).catch(rej),1200);})},
+];dbg(`→ ${path}`);for(const p of proxies){try{const r=await Promise.race([p.build(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),7000))]);if(!r.ok){dbg(`  ${p.label}: HTTP ${r.status}`);continue;}const j=await r.json();if(!j){dbg(`  ${p.label}: null response`);continue;}dbg(`  ${p.label}: ✓`);if(p.label==='direct')setLive(true);return j;}catch(e){dbg(`  ${p.label}: ${e.message}`);}}dbg(`  ALL FAILED for ${path}`);return null;}
+async function _psdInit(){try{document.getElementById('dbgBox').classList.add('show');setStatus('loading','Loading commodities…');const comms=await usda('commodities');if(!comms){throw new Error('commodities endpoint failed');}setStatus('loading','Loading countries…');const cntry=await usda('countries');if(!cntry){throw new Error('countries endpoint failed');}setStatus('loading','Loading attributes…');const attrs=await usda('commodityAttributes');if(!attrs){throw new Error('commodityAttributes endpoint failed');}setStatus('loading','Loading units…');const units=await usda('unitsOfMeasure')||[];attrs.forEach(a=>attrMap[a.attributeId]=a.attributeName);cntry.forEach(c=>countryMap[c.countryCode]=c.countryName);(units||[]).forEach(u=>unitMap[u.unitId]=u.unitName);dbg(`${comms.length} comms · ${cntry.length} cntry · ${attrs.length} attrs`);const sc=document.getElementById('selComm');sc.innerHTML=comms.sort((a,b)=>a.commodityName.localeCompare(b.commodityName)).map(c=>`<option value="${c.commodityCode}">${c.commodityName}</option>`).join('');const cot=comms.find(c=>c.commodityCode==='2631000'||c.commodityName.toLowerCase().includes('cotton, upland'));if(cot)sc.value=cot.commodityCode;sc.disabled=false;const cc=document.getElementById('selCountries');cc.innerHTML=`<option value="WORLD" style="color:var(--gold);font-weight:600">🌍 World (All Countries)</option>`+cntry.sort((a,b)=>a.countryName.localeCompare(b.countryName)).map(c=>`<option value="${c.countryCode}">${c.countryName}</option>`).join('');[...cc.options].forEach(o=>{if(DEF_SEL.includes(o.value))o.selected=true;});document.getElementById('btnLoad').disabled=false;setStatus('ok','✓ Ready — select commodity & countries, click Load Data');setProg(100);}catch(e){setStatus('err','✗ Init: '+e.message);document.getElementById('dbgBox').classList.add('show');}}
+;
+async function fetchData(){const commCode=document.getElementById('selComm').value;const selCodes=[...document.getElementById('selCountries').selectedOptions].map(o=>o.value);const lookback=parseInt(document.getElementById('selYears').value);if(!commCode||!selCodes.length){setStatus('err','Select commodity and at least one country');return;}document.getElementById('btnLoad').disabled=true;gData={};gYears=[];gCountryRows={};aUnit={};aMult={};mData={};curRelease={};prvRelease={};curHistAttr=null;setLive(false);setProg(5);document.getElementById('dbgBox').innerHTML='';const commName=document.getElementById('selComm').selectedOptions[0]?.text||commCode;setStatus('loading',`⟳ ${commName}…`);const inclWorld=selCodes.includes('WORLD');const ccs=[...new Set(selCodes.filter(c=>c!=='WORLD'))];const primaryCC=ccs.find(c=>c==='US')||ccs[0]||'US';gPrimaryCC=primaryCC;gCommCode=commCode;const maxY=new Date().getFullYear(),minY=maxY-lookback;const years=[];for(let y=maxY;y>=minY;y--)years.push(y);function storeRows(y,rows){rows.forEach(r=>{if(aUnit[r.attributeId]!=null)return;const rawU=unitMap[r.unitId]||'';const{mult,display}=parseUnitString(rawU,attrMap[r.attributeId]||'');aMult[r.attributeId]=mult;aUnit[r.attributeId]=display;});if(rows.length&&!gData[y]){gData[y]=rows;gYears.push(y);}}
+async function fetchYear(y){const targets=[];if(inclWorld)targets.push({cc:'WORLD',path:`commodity/${commCode}/world/year/${y}`});ccs.forEach(cc=>targets.push({cc,path:`commodity/${commCode}/country/${cc}/year/${y}`}));const results=await Promise.all(targets.map(async t=>{const d=await usda(t.path);const arr=Array.isArray(d)?d:[];if(t.cc==='WORLD'){if(!gCountryRows[y])gCountryRows[y]=[];arr.forEach(r=>{gCountryRows[y].push({...r});});arr.forEach(r=>r.countryCode='WORLD');}return arr;}));return results.flat();}
+setStatus('loading',`⟳ ${commName} — fetching ${years.length} years…`);let results=await Promise.all(years.map(async y=>{const rows=await fetchYear(y);storeRows(y,rows);setProg(5+Math.round((gYears.length/years.length)*72));return{y,ok:!!gData[y]};}));let pending=results.filter(r=>!r.ok).map(r=>r.y);for(let pass=1;pass<=3&&pending.length>0;pass++){await new Promise(r=>setTimeout(r,pass*800));dbg(`Retry pass ${pass}: ${pending.length} years`);setStatus('loading',`⟳ ${commName} — retrying ${pending.length} missing years…`);const retried=await Promise.all(pending.map(async y=>{const rows=await fetchYear(y);storeRows(y,rows);return{y,ok:!!gData[y]};}));pending=retried.filter(r=>!r.ok).map(r=>r.y);}if(pending.length)dbg(`⚠ Could not load: ${pending.join(',')}`);gYears.sort((a,b)=>a-b);setProg(78);const RATIO_KW=['yield','stocks-to-use','stock to use','stocks/use'];const PCT_WORDS2=['%','percent'];Object.keys(attrMap).forEach(id=>{const nm=(attrMap[id]||'').toLowerCase();const ut=(aUnit[id]||'').toLowerCase();const isRatio=RATIO_KW.some(k=>nm.includes(k))||PCT_WORDS2.some(k=>ut.includes(k));aMult[id]=isRatio?1:1000;});dbg('findConsumption → '+(findConsumption()?attrMap[findConsumption()]:'NULL'));document.getElementById('btnLoad').disabled=false;if(!gYears.length){setStatus('err','✗ No data');setProg(0);return;}document.getElementById('btnPdf').disabled=false;curHistAttr=findA('ending stocks')||findA('production')||parseInt(Object.keys(aUnit)[0]);const DEFAULT_SUMMARY_NAMES=['Brazil','United States','Australia','China','India','Pakistan','Vietnam','Turkey','Bangladesh'];function findCCByName(frag){const lc=frag.toLowerCase();const e=Object.entries(countryMap).find(([,n])=>n.toLowerCase().includes(lc));return e?e[0]:null;}const DEFAULT_SUMMARY_CCS=DEFAULT_SUMMARY_NAMES.map(findCCByName).filter(Boolean);window.summaryTableCCs=[...DEFAULT_SUMMARY_CCS];const sumYears=gYears.slice(-2);await Promise.all(DEFAULT_SUMMARY_CCS.flatMap(cc=>sumYears.map(async y=>{if(!gCountryRows[y])gCountryRows[y]=[];const d=await usda(`commodity/${commCode}/country/${cc}/year/${y}`);(Array.isArray(d)?d:[]).forEach(r=>gCountryRows[y].push(r));})));setProg(100);setStatus('ok',`✓ ${commName} · ${gYears.length} yrs loaded`);document.getElementById('footTs').textContent=`Loaded ${new Date().toLocaleString()} · ${commName}`;renderAll(commName,primaryCC,selCodes);}
+function renderAll(commName,primaryCC,selCodes){renderIntel(commName,primaryCC);buildHistTabs();renderHistChart(selCodes);renderBalanceSheet(commName,selCodes);setTimeout(()=>{['kpiCard','intelCard','bsCard','bsUSACard'].forEach(id=>{fitCardForPrint(id);});},800);}
+function renderKPIs(commName,pcc){return;}
+function renderIntel(commName,pcc){document.getElementById('intelCard').style.display='';if(gYears.length<2)return;const ly=gYears[gYears.length-1],py=gYears[gYears.length-2];const pname=ccName(pcc);document.getElementById('intelSub').textContent=`${commName} · ${fmtMY(ly)} vs ${fmtMY(py)} · World · USA`;const eid=findA('ending stocks'),pid=findA('production'),xid=findA('export'),mid=findA('import'),cid=findConsumption();const unit=eid?aUnit[eid]:'';const G=(y,cc,id)=>getV(y,cc,id);const wE=[G(ly,'WORLD',eid),G(py,'WORLD',eid)];const wP=[G(ly,'WORLD',pid),G(py,'WORLD',pid)];const wX=[G(ly,'WORLD',xid),G(py,'WORLD',xid)];const wC=[G(ly,'WORLD',cid),G(py,'WORLD',cid)];const lP=[G(ly,pcc,pid),G(py,pcc,pid)];const lE=[G(ly,pcc,eid),G(py,pcc,eid)];function calcSUI(e,c,y){if(e==null)return null;if(c!=null&&c>0)return e/c*100;const tsid=findA('total supply'),tsv=getV(y,'WORLD',tsid);if(tsv!=null&&tsv>e)return e/(tsv-e)*100;return null;}const su0=calcSUI(wE[0],wC[0],ly),su1=calcSUI(wE[1],wC[1],py);const wPch=wP[0]!=null&&wP[1]!=null?pct(wP[0],wP[1]):null;const wEch=wE[0]!=null&&wE[1]!=null?pct(wE[0],wE[1]):null;const wXch=wX[0]!=null&&wX[1]!=null?pct(wX[0],wX[1]):null;const lPch=lP[0]!=null&&lP[1]!=null?pct(lP[0],lP[1]):null;const lines=[];if(wPch!=null){const dir=wPch>3?'expanded':'declined';lines.push(`Global ${commName.toLowerCase()} production ${dir} ${fmtPct(wPch)} in ${fmtMY(ly)} to ${fmt(wP[0])} ${unit}.`);}if(su0!=null){const suTone=su0<18?'critically tight':su0<25?'below the comfort zone':su0>40?'ample':'in neutral territory';const delta=su1!=null?` (${su0-su1>=0?'+':''}${(su0-su1).toFixed(1)}pp YoY)`:'';lines.push(`World stocks-to-use stands at ${su0.toFixed(1)}%${delta}, which is ${suTone}.`);}else if(wEch!=null){const eTone=wEch<-10?'drawing down sharply':wEch>10?'building':'relatively steady';lines.push(`Global ending stocks are ${eTone} at ${fmt(wE[0])} ${unit}.`);}const usP=[G(ly,'US',pid),G(py,'US',pid)];const usPch=usP[0]!=null&&usP[1]!=null?pct(usP[0],usP[1]):null;const tradePart=wXch!=null?`World exports ${wXch>0?'rose':'fell'} ${fmtPct(wXch)}.`:'';const usPart=usPch!=null?` USA production ${usPch>0?'grew':'fell'} ${fmtPct(usPch)} to ${fmt(usP[0])} ${unit}.`:'';if(tradePart||usPart)lines.push((tradePart+usPart).trim());const bias=su0!=null?(su0<22?'bullish':su0>38?'bearish':'neutral'):(wEch!=null&&wEch<-5?'bullish':wEch>5?'bearish':'neutral');const actionMap={bullish:`Balance sheet supports a ${commName.toLowerCase()} long — watch for weather disruptions.`,bearish:`Elevated carry creates a challenging environment for longs; defensive posture favoured.`,neutral:`Balance sheet is finely balanced — range-bound trade likely.`};lines.push(actionMap[bias]);function findCC2(nameFrag){const lc=nameFrag.toLowerCase();const e=Object.entries(countryMap).find(([,n])=>n.toLowerCase().includes(lc));return e?e[0]:null;}const DEFAULT_NAMES=['Brazil','United States','Australia','China','India','Pakistan','Vietnam','Turkey','Bangladesh'];const DEFAULT_CCS=DEFAULT_NAMES.map(findCC2).filter(Boolean);if(!window.summaryTableCCs)window.summaryTableCCs=[...DEFAULT_CCS];const ddOpts=Object.entries(countryMap).sort((a,b)=>a[1].localeCompare(b[1])).map(([cc,nm])=>`<option value="${cc}">${nm}</option>`).join('');const summaryHtml=`<div class="ts-lines">${lines.map((l,i)=>`<p class="ts-line ts-l${i+1}">${l}</p>`).join('')}</div><div class="ct-table-section"><div class="ct-toolbar"><span class="ct-toolbar-lbl">Balance Sheet Matrix · Key Countries · ${fmtMY(py)} / ${fmtMY(ly)}</span><span class="ct-toolbar-hint">Add country:</span><select class="ct-dd" id="ctAddDd" onchange="addSummaryCC(this.value)"><option value="">— select —</option>${ddOpts}</select></div><div class="ct-tbl-outer" id="ctTblOuter"></div></div>`;document.getElementById('traderSummary').innerHTML=summaryHtml;document.getElementById('intelFoot').textContent=`${unit} · USDA FAS PSD · Values ×1,000 · M=million`;renderSummaryTable(commName);}
+function lookupCC(nameFrag){const lc=nameFrag.toLowerCase();const e=Object.entries(countryMap).find(([,n])=>n.toLowerCase().includes(lc));return e?e[0]:null;}
+async function addSummaryCC(cc){if(!cc)return;const sel=document.getElementById('ctAddDd');if(sel)sel.value='';if(window.summaryTableCCs.includes(cc))return;const ly=gYears[gYears.length-1],py=gYears[gYears.length-2];for(const y of[ly,py]){if(!gCountryRows[y])gCountryRows[y]=[];const already=gCountryRows[y].some(r=>r.countryCode===cc);if(!already){const d=await usda(`commodity/${gCommCode}/country/${cc}/year/${y}`);(Array.isArray(d)?d:[]).forEach(r=>gCountryRows[y].push(r));}}window.summaryTableCCs.push(cc);renderSummaryTable();}
+function removeSummaryCC(cc){window.summaryTableCCs=window.summaryTableCCs.filter(c=>c!==cc);renderSummaryTable();}
+function renderSummaryTable(){const ly=gYears[gYears.length-1],py=gYears[gYears.length-2];const tblCCs=window.summaryTableCCs;const sa=sortedAttrs();function gcv(y,cc,attrId){if(!gCountryRows[y])return null;const r=gCountryRows[y].find(x=>x.countryCode===cc&&+x.attributeId===+attrId);if(!r||r.value==null)return null;return r.value*(aMult[attrId]||1);}function sn(cc){return(countryMap[cc]||cc).replace('United States','USA').replace('United Kingdom','UK').replace('European Union','EU').replace('Bangladesh','BANG').replace('Australia','AUS').replace('Vietnam','VNM').replace('Pakistan','PAK').replace('Turkey','TUR').replace('Brazil','BRZ').replace('China','CHN').replace('India','IND');}const hdr=`<thead><tr><th class="ct-attr" rowspan="2">Attribute</th>${tblCCs.map(cc=>`<th colspan="2" class="ct-cc"><span class="ct-cc-nm">${sn(cc)}</span><span class="ct-rm" onclick="removeSummaryCC('${cc}')" title="Remove">✕</span></th>`).join('')}</tr><tr>${tblCCs.map(()=>`<th class="ct-yr">${fmtMY(ly).replace('MY ','')}</th><th class="ct-yr muted">${fmtMY(py).replace('MY ','')}</th>`).join('')}</tr></thead>`;const body=sa.map(attr=>{const cells=tblCCs.map(cc=>{const vl=gcv(ly,cc,attr.id),vp=gcv(py,cc,attr.id);const cls=vl!=null&&vp!=null?(vl>vp?'dp':vl<vp?'dn':''):'';return `<td class="${cls}">${fmt(vl,1)}</td><td class="muted">${fmt(vp,1)}</td>`;}).join('');return `<tr><td class="ct-attr-nm">${attr.name}<span class="ct-unit"> (${attr.unit})</span></td>${cells}</tr>`;}).join('');const outer=document.getElementById('ctTblOuter');if(outer)outer.innerHTML=`<table class="ct-tbl"><${hdr}<tbody>${body}</tbody></table>`;}
+const gHistCharts={};
+function buildHistTabs(){}
+function renderHistChart(selCodes){document.getElementById('histCard').style.display='';document.getElementById('histCard2').style.display='';if(!gYears.length)return;selCodes=selCodes||[...document.getElementById('selCountries').selectedOptions].map(o=>o.value);const lookback=parseInt(document.getElementById('selYears').value)||15;const dispYears=gYears.slice(-lookback);const sa=sortedAttrs();const labels=dispYears.map(fmtMY);const showCC=[];if(selCodes.includes('WORLD'))showCC.push('WORLD');selCodes.filter(c=>c!=='WORLD').forEach(c=>showCC.push(c));const half=Math.ceil(sa.length/2);const sa1=sa.slice(0,half),sa2=sa.slice(half);const sub=`${fmtMY(dispYears[0])}–${fmtMY(dispYears[dispYears.length-1])} · ${showCC.map(ccName).join(', ')}`;document.getElementById('histSub').textContent=`${sa1.length} attributes · ${sub}`;document.getElementById('histSub2').textContent=`${sa2.length} attributes · ${sub}`;Object.values(gHistCharts).forEach(c=>{try{c.destroy();}catch(e){}});Object.keys(gHistCharts).forEach(k=>delete gHistCharts[k]);function buildGrid(gridId,attrs){const grid=document.getElementById(gridId);grid.innerHTML=attrs.map(attr=>`<div class="mini-chart-block"><div class="mini-chart-title"><strong>${attr.name}</strong>&nbsp;<span style="color:var(--muted2);font-size:.5rem">${attr.unit}</span></div><div class="mini-chart-wrap"><canvas id="mc_${attr.id}"></canvas></div></div>`).join('');}buildGrid('histChartsGrid',sa1);buildGrid('histChartsGrid2',sa2);const mkOpts=(unit)=>({responsive:true,maintainAspectRatio:false,animation:{duration:0},interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#8a9ab8',font:{family:'DM Mono',size:8},boxWidth:10,padding:5}},tooltip:{backgroundColor:'#0e1218',borderColor:'rgba(232,197,71,.2)',borderWidth:1,titleColor:'#e8c547',bodyColor:'#dde4f0',titleFont:{family:'DM Mono',size:8},bodyFont:{family:'DM Mono',size:8},filter:i=>i.raw!=null,callbacks:{label:i=>`${i.dataset.label}: ${fmt(i.raw,1)} ${unit}`}}},scales:{x:{ticks:{color:'#4a5870',font:{family:'DM Mono',size:7.5},maxRotation:35,maxTicksLimit:8},grid:{color:'#161e2a'}},y:{ticks:{color:'#4a5870',font:{family:'DM Mono',size:7.5},callback:v=>fmt(v,1),maxTicksLimit:5},grid:{color:'#161e2a'}}}});[...sa1,...sa2].forEach(attr=>{const cv=document.getElementById(`mc_${attr.id}`);if(!cv)return;const datasets=[];let ci=0;showCC.forEach(cc=>{const pts=dispYears.map(y=>getV(y,cc,attr.id));if(pts.every(v=>v==null))return;const isW=cc==='WORLD',col=CC[ci%CC.length];ci++;datasets.push({label:ccName(cc),data:pts,borderColor:col,backgroundColor:col+(isW?'22':'10'),borderWidth:isW?2:1.5,borderDash:isW?[]:[3,2],pointRadius:isW?2.5:1.5,tension:.3,fill:false,spanGaps:true});});if(!datasets.length)return;gHistCharts[attr.id]=new Chart(cv.getContext('2d'),{type:'line',data:{labels,datasets},options:mkOpts(attr.unit)});});setTimeout(()=>{fitCardForPrint('histCard');fitCardForPrint('histCard2');},800);}
+function renderBalanceSheet(commName,selCodes){document.getElementById('bsCard').style.display='';if(!gYears.length)return;const sa=sortedAttrs();const dYears=gYears.slice(-10);const ly=dYears[dYears.length-1],py=dYears[dYears.length-2]||ly-1;const hasWorld=selCodes.includes('WORLD');const ccs=selCodes.filter(c=>c!=='WORLD');const aggCodes=['WORLD'];const label='World';function getA(yr,aid){return getV(yr,aggCodes[0],aid);}document.getElementById('bsSub').textContent=`${commName} · ${label} · Last ${dYears.length} yrs`;document.getElementById('bsChip').textContent=`${sa.length} ATTRIBUTES`;const SUPPLY=['Beginning Stocks','Area Planted','Area Harvested','Yield','Production','Import','Total Supply'];const DEMAND=['Feed','Food','Industrial','Domestic','Other Use','Distribution','Export','Loss'];const STOCKS=['Ending Stocks'];function sec(n){if(STOCKS.some(x=>n.includes(x)))return'S';if(DEMAND.some(x=>n.includes(x)))return'D';if(SUPPLY.some(x=>n.includes(x)))return'U';return'O';}const SL={S:'── Stocks',D:'── Demand / Distribution',U:'── Supply',O:'── Other'};let h=`<table><thead><tr class="grp"><th rowspan="2">Attribute <span class="ul">(Unit)</span></th>`;dYears.forEach(y=>{if(y===ly)h+=`<th colspan="2" class="lc">${fmtMY(y)} ← Latest</th>`;else h+=`<th>${fmtMY(y)}</th>`;});h+=`</tr><tr class="hdr">`;dYears.forEach(y=>{if(y===ly)h+=`<th class="lc">Value</th><th class="lc" style="min-width:66px">vs ${fmtMY(py)}</th>`;else h+=`<th>Value</th>`;});h+=`</tr></thead><tbody>`;let lastSec='';sa.forEach(attr=>{const s=sec(attr.name);if(s!==lastSec){h+=`<tr class="sep"><td colspan="${1+dYears.length+1}">${SL[s]||s}</td></tr>`;lastSec=s;}h+=`<tr><td>${attr.name} <span class="ul">(${attr.unit})</span></td>`;dYears.forEach(y=>{const v=getA(y,attr.id);if(y===ly){const vp=getA(py,attr.id);const d=v!=null&&vp!=null?v-vp:null;h+=`<td class="lv">${fmt(v)}</td><td class="${d==null?'dz':d>0?'dp':'dn'}">${d!=null?fmtD(d):'—'}</td>`;}else{h+=`<td>${fmt(v)}</td>`;}});h+=`</tr>`;});h+=`</tbody></table>`;document.getElementById('bsTbl').innerHTML=h;const us=[...new Set(sa.map(a=>a.unit).filter(Boolean))];const hasMult=Object.values(aMult).some(m=>m>1);document.getElementById('bsFoot').textContent=`World · Units: ${us.slice(0,5).join(' / ')}${hasMult?' · Values ×1,000':''}`;const usaHasData=dYears.some(y=>sa.some(a=>getV(y,'US',a.id)!=null));const usaCard=document.getElementById('bsUSACard');if(usaHasData&&usaCard){usaCard.style.display='';document.getElementById('bsUSASub').textContent=`${commName} · United States · Last ${dYears.length} yrs`;document.getElementById('bsUSAChip').textContent=`${sa.length} ATTRIBUTES`;let hu=`<table><thead><tr class="grp"><th rowspan="2">Attribute <span class="ul">(Unit)</span></th>`;dYears.forEach(y=>{if(y===ly)hu+=`<th colspan="2" class="lc">${fmtMY(y)} ← Latest</th>`;else hu+=`<th>${fmtMY(y)}</th>`;});hu+=`</tr><tr class="hdr">`;dYears.forEach(y=>{if(y===ly)hu+=`<th class="lc">Value</th><th class="lc" style="min-width:66px">vs ${fmtMY(py)}</th>`;else hu+=`<th>Value</th>`;});hu+=`</tr></thead><tbody>`;let lastSecU='';sa.forEach(attr=>{const s=sec(attr.name);if(s!==lastSecU){hu+=`<tr class="sep"><td colspan="${1+dYears.length+1}">${SL[s]||s}</td></tr>`;lastSecU=s;}hu+=`<tr><td>${attr.name} <span class="ul">(${attr.unit})</span></td>`;dYears.forEach(y=>{const v=getV(y,'US',attr.id);if(y===ly){const vp=getV(py,'US',attr.id);const d=v!=null&&vp!=null?v-vp:null;hu+=`<td class="lv">${fmt(v)}</td><td class="${d==null?'dz':d>0?'dp':'dn'}">${d!=null?fmtD(d):'—'}</td>`;}else{hu+=`<td>${fmt(v)}</td>`;}});hu+=`</tr>`;});hu+=`</tbody></table>`;document.getElementById('bsUSATbl').innerHTML=hu;document.getElementById('bsUSAFoot').textContent=`United States · Units: ${us.slice(0,5).join(' / ')}`;fitCardForPrint('bsUSACard');}else if(usaCard){usaCard.style.display='none';}const nonWorldNonUS=ccs.filter(c=>c!=='US');const ccCard=document.getElementById('bsCCCard');if(ccCard){if(nonWorldNonUS.length>0){const selCC=nonWorldNonUS[0];const selName=ccName(selCC);const ccHasData=dYears.some(y=>sa.some(a=>getV(y,selCC,a.id)!=null));if(ccHasData){ccCard.style.display='';document.getElementById('bsCCTitle').textContent=`Balance Sheet Matrix — ${selName}`;document.getElementById('bsCCSub').textContent=`${commName} · ${selName}`;document.getElementById('bsCCChip').textContent=selCC;let hc=`<table><thead><tr class="grp"><th rowspan="2">Attribute <span class="ul">(Unit)</span></th>`;dYears.forEach(y=>{if(y===ly)hc+=`<th colspan="2" class="lc">${fmtMY(y)} ← Latest</th>`;else hc+=`<th>${fmtMY(y)}</th>`;});hc+=`</tr><tr class="hdr">`;dYears.forEach(y=>{if(y===ly)hc+=`<th class="lc">Value</th><th class="lc" style="min-width:66px">vs ${fmtMY(py)}</th>`;else hc+=`<th>Value</th>`;});hc+=`</tr></thead><tbody>`;let lastSecC='';sa.forEach(attr=>{const s=sec(attr.name);if(s!==lastSecC){hc+=`<tr class="sep"><td colspan="${1+dYears.length+1}">${SL[s]||s}</td></tr>`;lastSecC=s;}hc+=`<tr><td>${attr.name} <span class="ul">(${attr.unit})</span></td>`;dYears.forEach(y=>{const v=getV(y,selCC,attr.id);if(y===ly){const vp=getV(py,selCC,attr.id);const d=v!=null&&vp!=null?v-vp:null;hc+=`<td class="lv">${fmt(v)}</td><td class="${d==null?'dz':d>0?'dp':'dn'}">${d!=null?fmtD(d):'—'}</td>`;}else{hc+=`<td>${fmt(v)}</td>`;}});hc+=`</tr>`;});hc+=`</tbody></table>`;document.getElementById('bsCCTbl').innerHTML=hc;document.getElementById('bsCCFoot').textContent=`${selName}`;fitCardForPrint('bsCCCard');}else{ccCard.style.display='none';}}else{ccCard.style.display='none';}}
+function generatePDF(){window.print();}
+function fitBsTable(cardId){const card=document.getElementById(cardId);if(!card||card.style.display==='none')return;const tblOuter=card.querySelector('.tbl-outer');if(!tblOuter)return;tblOuter.style.zoom='';const table=tblOuter.querySelector('table');if(!table)return;const PX_PER_MM=3.7795,pageH=178*PX_PER_MM;const headH=(card.querySelector('.card-head')?.offsetHeight||30);const footH=(card.querySelector('.card-footnote')?.offsetHeight||18);const availH=pageH-headH-footH-8;const tableH=table.offsetHeight;if(tableH<=0)return;const zoom=Math.min(availH/tableH,1);tblOuter.style.zoom=zoom;}
+function fitCardForPrint(cardId){if(cardId==='bsCard'||cardId==='bsUSACard')fitBsTable(cardId);}
+</script>
+</body>
+<script>_psdInit();</script>
+</html>
