@@ -148,10 +148,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     </div>
 
     <!-- Real file iframes — same origin, no restrictions -->
-    <iframe class="app-frame" id="frame-0" src="psd.html"></iframe>
-    <iframe class="app-frame" id="frame-1" src="cot.html"></iframe>
-    <iframe class="app-frame" id="frame-2" src="exports.html"></iframe>
-    <iframe class="app-frame" id="frame-3" src="cit.html"></iframe>
+    <iframe class="app-frame" id="frame-0"></iframe>
+    <iframe class="app-frame" id="frame-1"></iframe>
+    <iframe class="app-frame" id="frame-2"></iframe>
+    <iframe class="app-frame" id="frame-3"></iframe>
 
     <div id="frame-loader">
       <div class="loader-ring"></div>
@@ -248,11 +248,14 @@ function loadApp(idx) {
     loaded.add(idx);
     loader.classList.remove('hidden');
     ltxt.textContent = 'Loading ' + APPS[idx] + '…';
+    // Set src NOW (not at page load) so iframe loads while visible — fixes Safari
+    const srcs = ['psd.html','cot.html','exports.html','cit.html'];
+    frame.src = srcs[idx];
     frame.addEventListener('load', function onLoad() {
       frame.removeEventListener('load', onLoad);
       loader.classList.add('hidden');
     }, { once: true });
-    setTimeout(() => loader.classList.add('hidden'), 8000);
+    setTimeout(() => loader.classList.add('hidden'), 10000);
   } else {
     loader.classList.add('hidden');
   }
